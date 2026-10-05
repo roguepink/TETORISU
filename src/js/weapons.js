@@ -134,7 +134,7 @@ const WEAPONS = [
       const n = [3, 3, 4, 4, 5][lv - 1], spread = 0.11, sp = 820;
       for (let i = 0; i < n; i++) {
         const a = (i - (n - 1) / 2) * spread;
-        g.addBullet(new Bullet({ x: p.x + 28, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, dmg: 4.5 + lv, size: 7, shape: SHAPES.T, color: this.color, rot: a, vr: 7 }));
+        g.addBullet(new Bullet({ x: p.x + 28, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, dmg: 3.4 + lv * 0.75, size: 7, shape: SHAPES.T, color: this.color, rot: a, vr: 7 }));
       }
     },
   },
@@ -145,7 +145,7 @@ const WEAPONS = [
       const pairs = lv >= 4 ? 2 : 1;
       for (let j = 0; j < pairs; j++) {
         const amp = 20 + lv * 4 + j * 14;
-        for (const ph of [0, Math.PI]) g.addBullet(new Bullet({ x: p.x + 28, y: p.y, vx: 700, dmg: 4 + lv, size: 7, shape: SHAPES.S, color: this.color, kind: 'wave', amp, freq: 9, phase: ph, pierce: 1 }));
+        for (const ph of [0, Math.PI]) g.addBullet(new Bullet({ x: p.x + 28, y: p.y, vx: 700, dmg: 3 + lv * 0.75, size: 7, shape: SHAPES.S, color: this.color, kind: 'wave', amp, freq: 9, phase: ph, pierce: 1 }));
       }
     },
   },
@@ -154,7 +154,7 @@ const WEAPONS = [
     cooldown: (lv) => 0.26 - lv * 0.012,
     fire(g, p, lv) {
       const angs = lv < 3 ? [-0.45, 0.45] : lv < 5 ? [-0.55, -0.2, 0.2, 0.55] : [-0.6, -0.3, 0, 0.3, 0.6], sp = 720;
-      for (const a of angs) g.addBullet(new Bullet({ x: p.x + 28, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, dmg: 5 + lv * 0.8, size: 8, shape: SHAPES.Z, color: this.color, kind: 'bounce', bounces: 2 + lv, vr: 9, life: 4 }));
+      for (const a of angs) g.addBullet(new Bullet({ x: p.x + 28, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, dmg: 3.8 + lv * 0.6, size: 8, shape: SHAPES.Z, color: this.color, kind: 'bounce', bounces: 2 + lv, vr: 9, life: 4 }));
     },
   },
   {
@@ -164,7 +164,7 @@ const WEAPONS = [
       const n = [1, 1, 2, 2, 3][lv - 1];
       for (let i = 0; i < n; i++) {
         const a = n === 1 ? 0 : (i - (n - 1) / 2) * 0.8;
-        g.addBullet(new Bullet({ x: p.x + 26, y: p.y, vx: Math.cos(a) * 620, vy: Math.sin(a) * 620, speed: 600 + lv * 15, dmg: 3 + lv * 0.7, size: 8, shape: SHAPES.J, color: this.color, kind: 'homing', turn: 3 + lv * 0.6, life: 2.4 }));
+        g.addBullet(new Bullet({ x: p.x + 26, y: p.y, vx: Math.cos(a) * 620, vy: Math.sin(a) * 620, speed: 600 + lv * 15, dmg: 2.2 + lv * 0.5, size: 8, shape: SHAPES.J, color: this.color, kind: 'homing', turn: 3 + lv * 0.6, life: 2.4 }));
       }
     },
   },
@@ -172,7 +172,7 @@ const WEAPONS = [
     key: 'L', name: 'シャッター', en: 'SHATTER', color: MINO_COLORS.L, shape: SHAPES.L, desc: '本体は中威力、飛び散る破片は軽め', tier: '範囲',
     cooldown: (lv) => 0.34 - lv * 0.02,
     fire(g, p, lv) {
-      g.addBullet(new Bullet({ x: p.x + 28, y: p.y, vx: 620, dmg: 8 + lv * 2, size: 9, shape: SHAPES.L, color: this.color, kind: 'split', frags: [4, 5, 6, 6, 8][lv - 1], fragDmg: 2 + lv * 0.5, splitTime: 0.7, vr: 5 }));
+      g.addBullet(new Bullet({ x: p.x + 28, y: p.y, vx: 620, dmg: 8 + lv * 2, size: 9, shape: SHAPES.L, color: this.color, kind: 'split', frags: [4, 5, 6, 6, 8][lv - 1], fragDmg: 1.5 + lv * 0.4, splitTime: 0.7, vr: 5 }));
     },
   },
   {
@@ -188,7 +188,7 @@ const WEAPONS = [
     cooldown: (lv) => 0.6 - lv * 0.04,
     fire(g, p, lv) {
       const n = lv >= 5 ? 2 : 1, offs = n === 1 ? [0] : [-34, 34];
-      for (const oy of offs) g.addBullet(new Bullet({ x: p.x + 36, y: p.y + oy, vx: 390, dmg: 2.5 + lv * 0.6, size: 10 + lv, shape: SHAPES.P, color: this.color, kind: 'spin', vr: 9, pierce: Infinity, life: 3, tick: 0.15, glow: true }));
+      for (const oy of offs) g.addBullet(new Bullet({ x: p.x + 36, y: p.y + oy, vx: 390, dmg: 1.9 + lv * 0.45, size: 10 + lv, shape: SHAPES.P, color: this.color, kind: 'spin', vr: 9, pierce: Infinity, life: 3, tick: 0.15, glow: true }));
     },
   },
   {
@@ -215,11 +215,11 @@ function fireChargeShot(g, p, w, lv, ratio) {
 }
 // お供ミノの誘導ミサイル（弱めだが確実に当たる） / リアショット / ミサイル
 function fireOptionMissile(g, x, y, color, lv) {
-  g.addBullet(new Bullet({ x: x + 8, y, vx: 380, vy: rand(-120, 120), speed: 540 + lv * 15, dmg: 2.5 + lv * 0.7, size: 8, shape: SHAPES.M, color, kind: 'homing', turn: 5, life: 2.4, cute: true }));
+  g.addBullet(new Bullet({ x: x + 8, y, vx: 380, vy: rand(-120, 120), speed: 540 + lv * 15, dmg: 2 + lv * 0.5, size: 8, shape: SHAPES.M, color, kind: 'homing', turn: 5, life: 2.4, cute: true }));
 }
 function fireRearShot(g, p, color, lv) {
   for (const oy of [-8, 8]) g.addBullet(new Bullet({ x: p.x - 24, y: p.y + oy, vx: -800, vy: oy * 3, dmg: 3 + lv * 0.6, size: 7, shape: SHAPES.D, color, vr: 8 }));
 }
 function fireMissiles(g, p, color, lv) {
-  for (const s of [-1, 1]) g.addBullet(new Bullet({ x: p.x, y: p.y + s * 16, vx: 200, vy: s * 400, speed: 560, dmg: 3 + lv * 0.8, size: 7, shape: SHAPES.J, color, kind: 'homing', turn: 3.5, life: 2.2 }));
+  for (const s of [-1, 1]) g.addBullet(new Bullet({ x: p.x, y: p.y + s * 16, vx: 200, vy: s * 400, speed: 560, dmg: 2.2 + lv * 0.6, size: 7, shape: SHAPES.J, color, kind: 'homing', turn: 3.5, life: 2.2 }));
 }
