@@ -121,22 +121,24 @@ function drawPuyo(ctx, x, y, r, col, o = {}) {
 const ENEMY_TYPES = {
   drift: {
     hp: 21, r: 20, speed: 120, score: 100, amp: 28, fireInterval: 3.2,
+    init(e) { e.fireTimer = rand(0.1, 0.5); }, // 登場してすぐ 1 発目を撃つ
     update(e, dt, g) {
       e.x -= e.speed * dt; e.y = e.baseY + Math.sin(e.t * 2.2 + e.phase) * e.amp;
-      if (e.x < W - 40 && e.x > 120) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = rand(2.4, 4.2) / g.fireRate; if (Math.random() < 0.42 + g.stageIndex * 0.07) e.shootAimed(g, 190, 1, 0); } }
+      if (e.x < W - 10 && e.x > 120) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = rand(1.2, 2.2) / g.fireRate; if (Math.random() < 0.85) e.shootAimed(g, 195, 1, 0); } }
     },
   },
   cluster: {
     hp: 24, r: 19, speed: 115, score: 120, amp: 26, fireInterval: 3,
+    init(e) { e.fireTimer = rand(0.2, 0.8); },
     update(e, dt, g) {
       e.x -= e.speed * dt; e.y = e.baseY + Math.sin(e.t * 2 + e.phase) * e.amp;
-      if (e.x < W - 40 && e.x > 120) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = rand(2.5, 4) / g.fireRate; if (Math.random() < 0.28 + g.stageIndex * 0.06) e.shootAimed(g, 180, g.stageIndex >= 3 ? 3 : 1, 0.3); } }
+      if (e.x < W - 10 && e.x > 120) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = rand(1.5, 2.6) / g.fireRate; if (Math.random() < 0.65 + g.stageIndex * 0.04) e.shootAimed(g, 185, g.stageIndex >= 3 ? 3 : 1, 0.3); } }
     },
   },
   mini: { hp: 9, r: 13, speed: 140, score: 60, dropChance: 0.03, update(e, dt) { e.x += e.vx * dt; e.y += e.vy * dt; e.vx += (-e.speed - e.vx) * 2 * dt; e.vy *= Math.max(0, 1 - 2 * dt); e.y = clamp(e.y, 50, H - 20); } },
   shooter: {
-    hp: 45, r: 22, speed: 170, score: 250, fireInterval: 1.35,
-    init(e, o) { e.stopX = o.stopX || rand(540, 820); e.stay = o.stay || 7; e.shots = 0; },
+    hp: 45, r: 22, speed: 170, score: 250, fireInterval: 1.15,
+    init(e, o) { e.stopX = o.stopX || rand(540, 820); e.stay = o.stay || 7; e.shots = 0; e.fireTimer = 0.4; },
     update(e, dt, g) {
       if (e.state === 0) { e.x -= e.speed * dt; if (e.x < e.stopX) e.state = 1; }
       else if (e.state === 1) {
@@ -154,7 +156,7 @@ const ENEMY_TYPES = {
     },
   },
   big: {
-    hp: 165, r: 38, speed: 70, score: 500, amp: 18, dropChance: 0.35, fireInterval: 2.6,
+    hp: 165, r: 38, speed: 70, score: 500, amp: 18, dropChance: 0.35, fireInterval: 1.9,
     update(e, dt, g) {
       e.x -= e.speed * dt; e.y = e.baseY + Math.sin(e.t * 1.3 + e.phase) * e.amp;
       if (e.x < W - 40) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = e.def.fireInterval / g.fireRate; if (e.hp < e.maxHp * 0.6) e.shootRing(g, 10, 140, e.t); else e.shootAimed(g, 170, 3, 0.35); } }
@@ -174,19 +176,19 @@ const ENEMY_TYPES = {
       if (e.state === 0) { e.x -= 230 * dt; if (e.x < W - 90) { e.state = 1; e.stateT = 0; } }
       else if (e.state === 1) {
         e.stateT += dt; e.squash = Math.sin(e.stateT * 40) * 0.08; e.angry = true;
-        if (e.stateT > 0.85) { e.state = 2; const a = Math.atan2(g.player.y - e.y, g.player.x - e.x); e.vx = Math.cos(a) * e.speed; e.vy = Math.sin(a) * e.speed; }
+        if (e.stateT > 0.85) { e.state = 2; const a = Math.atan2(g.player.y - e.y, g.player.x - e.x); e.vx = Math.cos(a) * e.speed; e.vy = Math.sin(a) * e.speed; e.shootAimed(g, 230, 2, 0.5); }
       } else { e.x += e.vx * dt; e.y += e.vy * dt; if (Math.random() < 0.5) g.particles.add({ type: 'circle', x: e.x, y: e.y, size: 5, color: puyoColor(e.color).light, life: 0.3, shrink: true, alpha: 0.6 }); }
     },
   },
   spinner: {
-    hp: 24, r: 17, speed: 90, score: 150, fireInterval: 2.6,
-    init(e, o) { e.cx = o.cx; e.cy = o.cy; e.ang = o.ang; e.rad = o.rad; e.spin = o.spin; e.fireTimer = 2.2; },
+    hp: 24, r: 17, speed: 90, score: 150, fireInterval: 1.9,
+    init(e, o) { e.cx = o.cx; e.cy = o.cy; e.ang = o.ang; e.rad = o.rad; e.spin = o.spin; e.fireTimer = rand(0.6, 1.6); },
     update(e, dt, g) {
       e.cx -= e.speed * dt; e.ang += e.spin * dt; e.x = e.cx + Math.cos(e.ang) * e.rad; e.y = e.cy + Math.sin(e.ang) * e.rad;
       if (e.cx < W - 60) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = e.def.fireInterval / g.fireRate; e.shoot(g, e.ang, 160); } }
     },
   },
-  ojama: { hp: 112, r: 26, speed: 60, score: 400, amp: 10, noChain: true, dropChance: 0.6, init(e) { e.color = -1; }, update(e, dt) { e.x -= e.speed * dt; e.y = e.baseY + Math.sin(e.t + e.phase) * e.amp; } },
+  ojama: { hp: 112, r: 26, speed: 60, score: 400, amp: 10, noChain: true, dropChance: 0.6, fireInterval: 2.8, init(e) { e.color = -1; }, update(e, dt, g) { e.x -= e.speed * dt; e.y = e.baseY + Math.sin(e.t + e.phase) * e.amp; if (e.x < W - 40) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = e.def.fireInterval / g.fireRate; e.shootAimed(g, 160, 3, 0.4); } } } },
   bouncer: {
     hp: 27, r: 18, speed: 210, score: 180,
     init(e, o) { e.vx = -e.speed; e.vy = (o.dir || 1) * e.speed * 0.9; },
@@ -195,16 +197,16 @@ const ENEMY_TYPES = {
       let hit = false;
       if (e.y < 60 + e.r) { e.y = 60 + e.r; e.vy = Math.abs(e.vy); hit = true; }
       if (e.y > H - 20 - e.r) { e.y = H - 20 - e.r; e.vy = -Math.abs(e.vy); hit = true; }
-      if (hit) { e.squash = 0.2; if (e.x < W - 30 && Math.random() < 0.65) e.shootAimed(g, 200, 1, 0); }
+      if (hit) { e.squash = 0.2; if (e.x < W - 30 && Math.random() < 0.85) e.shootAimed(g, 200, 1, 0); }
     },
   },
   homer: {
     hp: 30, r: 19, speed: 175, score: 220,
     init(e) { e.vx = -160; e.vy = 0; },
-    update(e, dt, g) { const p = g.player, a = Math.atan2(p.y - e.y, p.x - e.x); e.vx += (Math.cos(a) * e.speed - e.vx) * 1.4 * dt; e.vy += (Math.sin(a) * e.speed - e.vy) * 1.4 * dt; e.x += e.vx * dt; e.y += e.vy * dt; },
+    update(e, dt, g) { const p = g.player, a = Math.atan2(p.y - e.y, p.x - e.x); e.vx += (Math.cos(a) * e.speed - e.vx) * 1.4 * dt; e.vy += (Math.sin(a) * e.speed - e.vy) * 1.4 * dt; e.x += e.vx * dt; e.y += e.vy * dt; if (e.x < W - 40) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = 1.6 / g.fireRate; e.shootAimed(g, 210, 1, 0); } } },
   },
   turret: {
-    hp: 72, r: 22, speed: 0, score: 300, fireInterval: 1.9,
+    hp: 72, r: 22, speed: 0, score: 300, fireInterval: 1.6,
     init(e, o) { e.top = !!o.top; e.y = e.top ? 44 + e.r * 0.55 : H - e.r * 0.55; e.shots = 0; },
     update(e, dt, g) {
       e.x -= g.scrollSpeed * 1.5 * dt;
@@ -218,7 +220,7 @@ const ENEMY_TYPES = {
       }
     },
   },
-  wall: { hp: 33, r: 20, speed: 130, score: 80, init(e, o) { e.speed = o.speed || 130; }, update(e, dt) { e.x -= e.speed * dt; } },
+  wall: { hp: 33, r: 20, speed: 130, score: 80, fireInterval: 3.4, init(e, o) { e.speed = o.speed || 130; e.fireTimer = rand(0.5, 2); }, update(e, dt, g) { e.x -= e.speed * dt; if (e.x < W - 40) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = rand(2.6, 4.2) / g.fireRate; if (Math.random() < 0.25) e.shootAimed(g, 170, 1, 0); } } } },
   rainbow: { hp: 33, r: 20, speed: 135, score: 800, dropChance: 1, amp: 42, update(e, dt) { e.x -= e.speed * dt; e.y = e.baseY + Math.sin(e.t * 2.6 + e.phase) * e.amp; } },
   carrier: { hp: 98, r: 24, speed: 55, score: 300, dropChance: 1, amp: 14, update(e, dt) { e.x -= e.speed * dt; e.y = e.baseY + Math.sin(e.t * 1.2 + e.phase) * e.amp; } },
   // 停止してリング弾を撃つ
@@ -256,6 +258,7 @@ const ENEMY_TYPES = {
       else if (e.state === 1) {
         e.ang += 3.2 * dt; e.x = e.cx - Math.sin(e.ang) * 70; e.y = e.cy + e.dir * Math.cos(e.ang) * 70;
         if (!e.fired && e.ang > Math.PI) { e.fired = true; e.shootAimed(g, 220, 3, 0.3); }
+        if (!e.fired2 && e.ang > Math.PI * 1.7) { e.fired2 = true; e.shootAimed(g, 240, 1, 0); }
         if (e.ang >= TAU) e.state = 2;
       } else e.x -= e.speed * 1.2 * dt;
     },

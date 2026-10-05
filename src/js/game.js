@@ -5,7 +5,8 @@ const DIFFS = [
   { name: 'ふつう', hp: 1.0, bspeed: 1.0, fire: 1.0, lives: 3, bombs: 3, color: '#5EC8FF' },
   { name: 'むずかしい', hp: 1.5, bspeed: 1.3, fire: 1.55, lives: 2, bombs: 2, color: '#FF5E7A' },
 ];
-const PLAYER_DMG_SCALE = 0.5; // 自機の全弾ダメージ係数
+const PLAYER_DMG_SCALE = 1.0; // 自機の全弾ダメージ係数（武器ごとの数値で調整済み）
+const ENEMY_HP_SCALE = 1.25; // 通常の敵の HP 係数
 const CHAIN_WORDS = [[12, 'きせき！！！'], [9, 'ばくはつ！！'], [7, 'すごい！！'], [5, 'ナイス！'], [3, 'いいね！'], [0, '']];
 
 class Game {
@@ -48,7 +49,7 @@ class Game {
   }
   addEBullet(b) { this.ebullets.push(b); }
   spawnEnemy(e) {
-    if (!e.isBoss) { const mul = this.diff.hp * STAGES[this.stageIndex].hpMul; e.maxHp *= mul; e.hp = e.maxHp; }
+    if (!e.isBoss) { const mul = this.diff.hp * STAGES[this.stageIndex].hpMul * ENEMY_HP_SCALE; e.maxHp *= mul; e.hp = e.maxHp; }
     this.enemies.push(e);
   }
   spawnItem(key, x, y) { if (!ITEMS[key]) return; this.items.push(new Item(key, x, y)); }
@@ -142,7 +143,7 @@ class Game {
     this.startStage(this.startStageSel);
   }
   startStage(i) {
-    this.fireRate = this.diff.fire * 0.7; this.progress = 0;
+    this.fireRate = this.diff.fire * 0.85; this.progress = 0;
     this.stageIndex = i; const st = STAGES[i];
     if (i > this.reached) { this.reached = i; try { localStorage.setItem('tetorisu_reached', String(i)); } catch (e) { /* ignore */ } }
     this.scrollSpeed = st.scroll; this.waves = generateWaves(i); this.waveIdx = 0; this.stageTime = 0; this.phase = 'waves'; this.phaseT = 0;
@@ -222,7 +223,7 @@ class Game {
     this.enemyTime = p.timers.slow > 0 ? 0.45 : 1;
     // ステージ内の進行度：敵の射撃頻度は序盤ひかえめ → 終盤に向けて激しく
     this.progress = this.phase === 'waves' ? clamp(this.stageTime / st.duration, 0, 1) : 1;
-    this.fireRate = this.diff.fire * (0.7 + 0.55 * this.progress);
+    this.fireRate = this.diff.fire * (0.85 + 0.45 * this.progress);
     if (this.feverT > 0) { this.feverT -= dt; this.fever = 100 * this.feverT / 9; if (this.feverT <= 0) { this.fever = 0; this.dmgMul = 1; } }
     // フェーズ
     this.phaseT += dt;
