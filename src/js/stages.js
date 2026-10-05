@@ -89,10 +89,10 @@ const SP = {
 
 // ---- 出現パターン（min: 登場する最初のステージ番号） ----
 const PATTERNS = [
-  { k: 'line', min: 0, w: 4, gap: 3.4, fn: SP.line }, { k: 'formation', min: 0, w: 4, gap: 3.5, fn: SP.formation }, { k: 'shooter', min: 0, w: 2.5, gap: 4, fn: SP.shooter },
+  { k: 'line', min: 0, w: 4, gap: 3.4, fn: SP.line }, { k: 'formation', min: 0, w: 4, gap: 3.5, fn: SP.formation }, { k: 'shooter', min: 0, w: 3.2, gap: 3.6, fn: SP.shooter },
   { k: 'big', min: 0, w: 1.5, gap: 4.6, fn: SP.big }, { k: 'colorBurst', min: 0, w: 2, gap: 3.4, fn: SP.colorBurst }, { k: 'spinner', min: 0, w: 1.5, gap: 4, fn: SP.spinner },
   { k: 'dasher', min: 0, w: 1, gap: 3, fn: SP.dasher }, { k: 'snake', min: 0, w: 1.5, gap: 3.5, fn: SP.snake }, { k: 'loopers', min: 0, w: 1.5, gap: 3.6, fn: SP.loopers },
-  { k: 'zigzags', min: 0, w: 1, gap: 3.4, fn: SP.zigzags }, { k: 'ringer', min: 0, w: 1.2, gap: 4.2, fn: SP.ringer }, { k: 'wavers', min: 0, w: 1, gap: 3.8, fn: SP.wavers },
+  { k: 'zigzags', min: 0, w: 1, gap: 3.4, fn: SP.zigzags }, { k: 'ringer', min: 0, w: 1.6, gap: 3.8, fn: SP.ringer }, { k: 'wavers', min: 0, w: 1, gap: 3.8, fn: SP.wavers },
   { k: 'bouncers', min: 1, w: 2, gap: 3, fn: SP.bouncers }, { k: 'wall', min: 1, w: 2, gap: 4.5, fn: SP.wall }, { k: 'dashers', min: 1, w: 1, gap: 3.4, fn: SP.dashers },
   { k: 'ojama', min: 1, w: 1, gap: 4, fn: SP.ojama }, { k: 'mixedCluster', min: 1, w: 1.5, gap: 3.6, fn: SP.mixedCluster }, { k: 'sniper', min: 1, w: 1.5, gap: 4.2, fn: SP.sniper },
   { k: 'divers', min: 1, w: 1.5, gap: 3.6, fn: SP.divers }, { k: 'ambushers', min: 1, w: 1, gap: 3.8, fn: SP.ambushers }, { k: 'bombers', min: 1, w: 1, gap: 4, fn: SP.bombers },

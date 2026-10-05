@@ -652,7 +652,7 @@ class Bullet {
       case 'bounce':
         this.x += this.vx * dt; this.y += this.vy * dt; this.rot += this.vr * dt;
         if ((this.y < 40 + this.r && this.vy < 0) || (this.y > H - 20 - this.r && this.vy > 0)) {
-          this.vy = -this.vy; this.bounces--; this.vx *= 1.12; this.vy *= 1.12; this.dmg += 3; this.hits.clear();
+          this.vy = -this.vy; this.bounces--; this.vx *= 1.1; this.vy *= 1.1; this.dmg += 1; this.hits.clear();
           fxSparkle(g.particles, this.x, this.y, this.color, 5); Sound.sfx.bounce();
           if (this.bounces < 0) this.dead = true;
         }
@@ -737,96 +737,96 @@ class Bullet {
 }
 
 // ===== 武器定義（10 種 × Lv1〜5） =====
+// 威力の方針：まっすぐ狙う武器ほど強く、広がる・追尾する・画面を覆う武器ほど弱い
 const WEAPONS = [
   {
-    key: 'I', name: 'ラインレーザー', en: 'LINE LASER', color: MINO_COLORS.I, shape: SHAPES.I, desc: 'まっすぐ貫通するロングショット',
-    cooldown: (lv) => (lv >= 5 ? 0.075 : 0.17 - lv * 0.015),
+    key: 'I', name: 'ラインレーザー', en: 'LINE LASER', color: MINO_COLORS.I, shape: SHAPES.I, desc: 'まっすぐ貫通。狙いが要るぶん最強クラスの威力', tier: '高威力',
+    cooldown: (lv) => (lv >= 5 ? 0.09 : 0.18 - lv * 0.012),
     fire(g, p, lv) {
-      const n = lv < 3 ? 1 : lv < 4 ? 2 : 3, offs = n === 1 ? [0] : n === 2 ? [-13, 13] : [-18, 0, 18];
-      for (const oy of offs) g.addBullet(new Bullet({ x: p.x + 34, y: p.y + oy, vx: 980, dmg: 7 + lv * 2, size: lv >= 5 ? 10 : 8, shape: SHAPES.I, color: this.color, pierce: 2 + lv, glow: true }));
+      const n = lv >= 3 ? 2 : 1, offs = n === 1 ? [0] : [-7, 7]; // 2 本でも 1 体に両方当たる間隔
+      for (const oy of offs) g.addBullet(new Bullet({ x: p.x + 34, y: p.y + oy, vx: 980, dmg: 9 + lv * 1.6, size: lv >= 5 ? 10 : 8, shape: SHAPES.I, color: this.color, pierce: 2 + lv, glow: true }));
     },
   },
   {
-    key: 'O', name: 'ヘビーブロック', en: 'HEAVY BLOCK', color: MINO_COLORS.O, shape: SHAPES.O, desc: '重い一撃、着弾すると爆発して周囲をまきこむ',
-    cooldown: (lv) => 0.5 - lv * 0.045,
+    key: 'O', name: 'ヘビーブロック', en: 'HEAVY BLOCK', color: MINO_COLORS.O, shape: SHAPES.O, desc: '遅いが一撃が重く、着弾で小さく爆発', tier: '高威力',
+    cooldown: (lv) => 0.55 - lv * 0.04,
     fire(g, p, lv) {
-      const n = lv >= 5 ? 3 : lv >= 3 ? 2 : 1, offs = n === 1 ? [0] : n === 2 ? [-22, 22] : [-34, 0, 34];
-      for (const oy of offs) g.addBullet(new Bullet({ x: p.x + 30, y: p.y + oy, vx: 470, dmg: 26 + lv * 9, size: 11 + lv, shape: SHAPES.O, color: this.color, kind: 'heavy', blast: 55 + lv * 13, vr: 3 }));
+      const n = lv >= 5 ? 2 : 1, offs = n === 1 ? [0] : [-14, 14];
+      for (const oy of offs) g.addBullet(new Bullet({ x: p.x + 30, y: p.y + oy, vx: 460, dmg: 22 + lv * 5, size: 11 + lv, shape: SHAPES.O, color: this.color, kind: 'heavy', blast: 40 + lv * 6, vr: 3 }));
     },
   },
   {
-    key: 'T', name: 'トライスプレッド', en: 'TRI SPREAD', color: MINO_COLORS.T, shape: SHAPES.T, desc: '扇状に広がるショット',
-    cooldown: (lv) => 0.2 - lv * 0.013,
+    key: 'T', name: 'トライスプレッド', en: 'TRI SPREAD', color: MINO_COLORS.T, shape: SHAPES.T, desc: '細い扇状に広がる。1 発は軽め', tier: '範囲',
+    cooldown: (lv) => 0.21 - lv * 0.01,
     fire(g, p, lv) {
-      const n = [3, 5, 5, 7, 7][lv - 1], spread = 0.2 + (lv >= 4 ? 0.02 : 0), sp = 820;
+      const n = [3, 3, 4, 4, 5][lv - 1], spread = 0.11, sp = 820;
       for (let i = 0; i < n; i++) {
         const a = (i - (n - 1) / 2) * spread;
-        g.addBullet(new Bullet({ x: p.x + 28, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, dmg: 8 + lv * 2, size: 7 + (lv >= 5 ? 1 : 0), shape: SHAPES.T, color: this.color, rot: a, vr: 7 }));
+        g.addBullet(new Bullet({ x: p.x + 28, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, dmg: 4.5 + lv, size: 7, shape: SHAPES.T, color: this.color, rot: a, vr: 7 }));
       }
     },
   },
   {
-    key: 'S', name: 'ウェーブ', en: 'WAVE', color: MINO_COLORS.S, shape: SHAPES.S, desc: 'うねりながら広い範囲をカバー',
-    cooldown: (lv) => 0.18 - lv * 0.012,
+    key: 'S', name: 'ウェーブ', en: 'WAVE', color: MINO_COLORS.S, shape: SHAPES.S, desc: 'うねって広めにカバー。威力は中くらい', tier: '範囲',
+    cooldown: (lv) => 0.2 - lv * 0.01,
     fire(g, p, lv) {
-      const pairs = [1, 1, 2, 2, 3][lv - 1];
+      const pairs = lv >= 4 ? 2 : 1;
       for (let j = 0; j < pairs; j++) {
-        const amp = 26 + lv * 7 + j * 18;
-        for (const ph of [0, Math.PI]) g.addBullet(new Bullet({ x: p.x + 28, y: p.y, vx: 700, dmg: 7 + lv * 2, size: 7, shape: SHAPES.S, color: this.color, kind: 'wave', amp, freq: 9, phase: ph, pierce: 1 + (lv >= 4 ? 1 : 0) }));
+        const amp = 20 + lv * 4 + j * 14;
+        for (const ph of [0, Math.PI]) g.addBullet(new Bullet({ x: p.x + 28, y: p.y, vx: 700, dmg: 4 + lv, size: 7, shape: SHAPES.S, color: this.color, kind: 'wave', amp, freq: 9, phase: ph, pierce: 1 }));
       }
     },
   },
   {
-    key: 'Z', name: 'リコシェ', en: 'RICOCHET', color: MINO_COLORS.Z, shape: SHAPES.Z, desc: '画面の上下で跳ね返り、跳ねるほど強くなる',
-    cooldown: (lv) => 0.23 - lv * 0.016,
+    key: 'Z', name: 'リコシェ', en: 'RICOCHET', color: MINO_COLORS.Z, shape: SHAPES.Z, desc: '上下で跳ね返る。跳ねるたび少しだけ強化', tier: '範囲',
+    cooldown: (lv) => 0.26 - lv * 0.012,
     fire(g, p, lv) {
-      const angs = lv < 3 ? [-0.5, 0.5] : lv < 5 ? [-0.6, -0.25, 0.25, 0.6] : [-0.7, -0.35, 0, 0.35, 0.7], sp = 720;
-      for (const a of angs) g.addBullet(new Bullet({ x: p.x + 28, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, dmg: 9 + lv * 2, size: 8, shape: SHAPES.Z, color: this.color, kind: 'bounce', bounces: 2 + lv, vr: 9, life: 4 }));
+      const angs = lv < 3 ? [-0.45, 0.45] : lv < 5 ? [-0.55, -0.2, 0.2, 0.55] : [-0.6, -0.3, 0, 0.3, 0.6], sp = 720;
+      for (const a of angs) g.addBullet(new Bullet({ x: p.x + 28, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, dmg: 5 + lv * 0.8, size: 8, shape: SHAPES.Z, color: this.color, kind: 'bounce', bounces: 2 + lv, vr: 9, life: 4 }));
     },
   },
   {
-    key: 'J', name: 'ホーミング', en: 'HOMING', color: MINO_COLORS.J, shape: SHAPES.J, desc: '敵を追いかける誘導ミノ',
-    cooldown: (lv) => 0.25 - lv * 0.017,
+    key: 'J', name: 'ホーミング', en: 'HOMING', color: MINO_COLORS.J, shape: SHAPES.J, desc: '必ず追いかけるぶん威力は低め', tier: '自動',
+    cooldown: (lv) => 0.3 - lv * 0.012,
     fire(g, p, lv) {
-      const n = [1, 2, 2, 3, 4][lv - 1];
+      const n = [1, 1, 2, 2, 3][lv - 1];
       for (let i = 0; i < n; i++) {
-        const a = n === 1 ? 0 : (i - (n - 1) / 2) * 0.9;
-        g.addBullet(new Bullet({ x: p.x + 26, y: p.y, vx: Math.cos(a) * 620, vy: Math.sin(a) * 620, speed: 620 + lv * 20, dmg: 9 + lv * 2, size: 8, shape: SHAPES.J, color: this.color, kind: 'homing', turn: 3.2 + lv * 0.9, pierce: lv >= 4 ? 1 : 0, life: 2.6 }));
+        const a = n === 1 ? 0 : (i - (n - 1) / 2) * 0.8;
+        g.addBullet(new Bullet({ x: p.x + 26, y: p.y, vx: Math.cos(a) * 620, vy: Math.sin(a) * 620, speed: 600 + lv * 15, dmg: 3 + lv * 0.7, size: 8, shape: SHAPES.J, color: this.color, kind: 'homing', turn: 3 + lv * 0.6, life: 2.4 }));
       }
     },
   },
   {
-    key: 'L', name: 'シャッター', en: 'SHATTER', color: MINO_COLORS.L, shape: SHAPES.L, desc: '命中するとミノがバラバラに飛び散る',
-    cooldown: (lv) => 0.32 - lv * 0.022,
+    key: 'L', name: 'シャッター', en: 'SHATTER', color: MINO_COLORS.L, shape: SHAPES.L, desc: '本体は中威力、飛び散る破片は軽め', tier: '範囲',
+    cooldown: (lv) => 0.34 - lv * 0.02,
     fire(g, p, lv) {
-      const n = lv >= 4 ? 2 : 1, offs = n === 1 ? [0] : [-16, 16];
-      for (const oy of offs) g.addBullet(new Bullet({ x: p.x + 28, y: p.y + oy, vx: 620, dmg: 12 + lv * 3, size: 9, shape: SHAPES.L, color: this.color, kind: 'split', frags: [4, 6, 8, 8, 12][lv - 1], fragDmg: 5 + lv * 1.5, splitTime: 0.7, vr: 5 }));
+      g.addBullet(new Bullet({ x: p.x + 28, y: p.y, vx: 620, dmg: 8 + lv * 2, size: 9, shape: SHAPES.L, color: this.color, kind: 'split', frags: [4, 5, 6, 6, 8][lv - 1], fragDmg: 2 + lv * 0.5, splitTime: 0.7, vr: 5 }));
     },
   },
   {
-    key: 'M', name: 'マシンガン', en: 'MACHINE GUN', color: MINO_COLORS.M, shape: SHAPES.M, desc: '雨あられの超高速連射',
-    cooldown: (lv) => 0.07 - lv * 0.005,
+    key: 'M', name: 'マシンガン', en: 'MACHINE GUN', color: MINO_COLORS.M, shape: SHAPES.M, desc: '一直線に高速連射。当て続ければ最強', tier: '高威力',
+    cooldown: (lv) => 0.075 - lv * 0.006,
     fire(g, p, lv) {
-      const n = [1, 1, 2, 2, 3][lv - 1], offs = n === 1 ? [0] : n === 2 ? [-10, 10] : [-14, 0, 14];
-      for (const oy of offs) g.addBullet(new Bullet({ x: p.x + 30, y: p.y + oy, vx: 1050, vy: rand(-45, 45), dmg: 4 + lv, size: 7, shape: SHAPES.M, color: this.color, rot: rand(TAU), vr: 15 }));
+      const n = lv >= 4 ? 2 : 1, offs = n === 1 ? [0] : [-6, 6];
+      for (const oy of offs) g.addBullet(new Bullet({ x: p.x + 30, y: p.y + oy, vx: 1050, vy: rand(-25, 25), dmg: 4.5 + lv * 0.7, size: 7, shape: SHAPES.M, color: this.color, rot: rand(TAU), vr: 15 }));
     },
   },
   {
-    key: 'P', name: 'スピンクロス', en: 'SPIN CROSS', color: MINO_COLORS.P, shape: SHAPES.P, desc: '回転しながら敵をなぎはらう貫通弾',
-    cooldown: (lv) => 0.55 - lv * 0.045,
+    key: 'P', name: 'スピンクロス', en: 'SPIN CROSS', color: MINO_COLORS.P, shape: SHAPES.P, desc: '回転しながら貫通。広く当たるぶん一撃は軽い', tier: '自動',
+    cooldown: (lv) => 0.6 - lv * 0.04,
     fire(g, p, lv) {
-      const n = lv >= 4 ? 2 : 1, offs = n === 1 ? [0] : [-40, 40];
-      for (const oy of offs) g.addBullet(new Bullet({ x: p.x + 36, y: p.y + oy, vx: 390, dmg: 6 + lv * 2, size: 10 + lv * 1.5, shape: SHAPES.P, color: this.color, kind: 'spin', vr: 9, pierce: Infinity, life: 3, tick: 0.13, glow: true }));
+      const n = lv >= 5 ? 2 : 1, offs = n === 1 ? [0] : [-34, 34];
+      for (const oy of offs) g.addBullet(new Bullet({ x: p.x + 36, y: p.y + oy, vx: 390, dmg: 2.5 + lv * 0.6, size: 10 + lv, shape: SHAPES.P, color: this.color, kind: 'spin', vr: 9, pierce: Infinity, life: 3, tick: 0.15, glow: true }));
     },
   },
   {
-    key: 'R', name: 'テトロレイン', en: 'TETRO RAIN', color: MINO_COLORS.D, shape: SHAPES.T, rainbow: true, desc: '前方の空からテトロミノが降りそそぐ',
-    cooldown: (lv) => 0.3 - lv * 0.03,
+    key: 'R', name: 'テトロレイン', en: 'TETRO RAIN', color: MINO_COLORS.D, shape: SHAPES.T, rainbow: true, desc: '前方の空から降る。手軽なぶん威力は低め', tier: '自動',
+    cooldown: (lv) => 0.36 - lv * 0.025,
     fire(g, p, lv) {
-      const n = [1, 2, 2, 3, 4][lv - 1];
+      const n = [1, 1, 2, 2, 3][lv - 1];
       for (let i = 0; i < n; i++) {
         const k = pick(TETROMINO_KEYS);
-        g.addBullet(new Bullet({ x: p.x + rand(110, 460), y: -30 - rand(60), vx: rand(20, 90), vy: rand(100, 300), gravity: 1500, dmg: 14 + lv * 4, size: 10, shape: SHAPES[k], color: MINO_COLORS[k], kind: 'rain', pierce: 2, vr: rand(-4, 4), life: 3 }));
+        g.addBullet(new Bullet({ x: p.x + rand(110, 460), y: -30 - rand(60), vx: rand(20, 90), vy: rand(100, 300), gravity: 1500, dmg: 6 + lv * 1.5, size: 10, shape: SHAPES[k], color: MINO_COLORS[k], kind: 'rain', pierce: 1, vr: rand(-4, 4), life: 3 }));
       }
     },
   },
@@ -837,19 +837,19 @@ const WEAPON_INDEX = {}; WEAPONS.forEach((w, i) => (WEAPON_INDEX[w.key] = i));
 function fireChargeShot(g, p, w, lv, ratio) {
   const shape = w.key === 'R' ? SHAPES[pick(TETROMINO_KEYS)] : w.shape;
   const size = 24 + lv * 3 + ratio * 8;
-  g.addBullet(new Bullet({ x: p.x + 60, y: p.y, vx: 430, dmg: 42 + lv * 16, size, shape, color: w.rainbow ? '#fff' : w.color, rainbow: !!w.rainbow, kind: 'spin', vr: 2.2, pierce: Infinity, life: 4, tick: 0.22, glow: true, big: true }));
+  g.addBullet(new Bullet({ x: p.x + 60, y: p.y, vx: 430, dmg: 22 + lv * 7, size, shape, color: w.rainbow ? '#fff' : w.color, rainbow: !!w.rainbow, kind: 'spin', vr: 2.2, pierce: Infinity, life: 4, tick: 0.25, glow: true, big: true }));
   Sound.sfx.chargeShot(); g.shake(8);
   fxMinoBurst(g.particles, p.x + 60, p.y, w.rainbow ? '#fff' : w.color, 10);
 }
 // お供ミノの誘導ミサイル（弱めだが確実に当たる） / リアショット / ミサイル
 function fireOptionMissile(g, x, y, color, lv) {
-  g.addBullet(new Bullet({ x: x + 8, y, vx: 380, vy: rand(-120, 120), speed: 540 + lv * 15, dmg: 4 + lv * 1.5, size: 8, shape: SHAPES.M, color, kind: 'homing', turn: 5, life: 2.4, cute: true }));
+  g.addBullet(new Bullet({ x: x + 8, y, vx: 380, vy: rand(-120, 120), speed: 540 + lv * 15, dmg: 2.5 + lv * 0.7, size: 8, shape: SHAPES.M, color, kind: 'homing', turn: 5, life: 2.4, cute: true }));
 }
 function fireRearShot(g, p, color, lv) {
-  for (const oy of [-8, 8]) g.addBullet(new Bullet({ x: p.x - 24, y: p.y + oy, vx: -800, vy: oy * 3, dmg: 4 + lv, size: 7, shape: SHAPES.D, color, vr: 8 }));
+  for (const oy of [-8, 8]) g.addBullet(new Bullet({ x: p.x - 24, y: p.y + oy, vx: -800, vy: oy * 3, dmg: 3 + lv * 0.6, size: 7, shape: SHAPES.D, color, vr: 8 }));
 }
 function fireMissiles(g, p, color, lv) {
-  for (const s of [-1, 1]) g.addBullet(new Bullet({ x: p.x, y: p.y + s * 16, vx: 200, vy: s * 400, speed: 560, dmg: 7 + lv * 2, size: 7, shape: SHAPES.J, color, kind: 'homing', turn: 3.5, life: 2.2 }));
+  for (const s of [-1, 1]) g.addBullet(new Bullet({ x: p.x, y: p.y + s * 16, vx: 200, vy: s * 400, speed: 560, dmg: 3 + lv * 0.8, size: 7, shape: SHAPES.J, color, kind: 'homing', turn: 3.5, life: 2.2 }));
 }
 
 /* ---- js/items.js ---- */
@@ -1078,22 +1078,24 @@ function drawPuyo(ctx, x, y, r, col, o = {}) {
 const ENEMY_TYPES = {
   drift: {
     hp: 21, r: 20, speed: 120, score: 100, amp: 28, fireInterval: 3.2,
+    init(e) { e.fireTimer = rand(0.1, 0.5); }, // 登場してすぐ 1 発目を撃つ
     update(e, dt, g) {
       e.x -= e.speed * dt; e.y = e.baseY + Math.sin(e.t * 2.2 + e.phase) * e.amp;
-      if (e.x < W - 40 && e.x > 120) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = rand(2.4, 4.2) / g.fireRate; if (Math.random() < 0.42 + g.stageIndex * 0.07) e.shootAimed(g, 190, 1, 0); } }
+      if (e.x < W - 10 && e.x > 120) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = rand(1.2, 2.2) / g.fireRate; if (Math.random() < 0.85) e.shootAimed(g, 195, 1, 0); } }
     },
   },
   cluster: {
     hp: 24, r: 19, speed: 115, score: 120, amp: 26, fireInterval: 3,
+    init(e) { e.fireTimer = rand(0.2, 0.8); },
     update(e, dt, g) {
       e.x -= e.speed * dt; e.y = e.baseY + Math.sin(e.t * 2 + e.phase) * e.amp;
-      if (e.x < W - 40 && e.x > 120) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = rand(2.5, 4) / g.fireRate; if (Math.random() < 0.28 + g.stageIndex * 0.06) e.shootAimed(g, 180, g.stageIndex >= 3 ? 3 : 1, 0.3); } }
+      if (e.x < W - 10 && e.x > 120) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = rand(1.5, 2.6) / g.fireRate; if (Math.random() < 0.65 + g.stageIndex * 0.04) e.shootAimed(g, 185, g.stageIndex >= 3 ? 3 : 1, 0.3); } }
     },
   },
   mini: { hp: 9, r: 13, speed: 140, score: 60, dropChance: 0.03, update(e, dt) { e.x += e.vx * dt; e.y += e.vy * dt; e.vx += (-e.speed - e.vx) * 2 * dt; e.vy *= Math.max(0, 1 - 2 * dt); e.y = clamp(e.y, 50, H - 20); } },
   shooter: {
-    hp: 45, r: 22, speed: 170, score: 250, fireInterval: 1.35,
-    init(e, o) { e.stopX = o.stopX || rand(540, 820); e.stay = o.stay || 7; e.shots = 0; },
+    hp: 45, r: 22, speed: 170, score: 250, fireInterval: 1.15,
+    init(e, o) { e.stopX = o.stopX || rand(540, 820); e.stay = o.stay || 7; e.shots = 0; e.fireTimer = 0.4; },
     update(e, dt, g) {
       if (e.state === 0) { e.x -= e.speed * dt; if (e.x < e.stopX) e.state = 1; }
       else if (e.state === 1) {
@@ -1111,7 +1113,7 @@ const ENEMY_TYPES = {
     },
   },
   big: {
-    hp: 165, r: 38, speed: 70, score: 500, amp: 18, dropChance: 0.35, fireInterval: 2.6,
+    hp: 165, r: 38, speed: 70, score: 500, amp: 18, dropChance: 0.35, fireInterval: 1.9,
     update(e, dt, g) {
       e.x -= e.speed * dt; e.y = e.baseY + Math.sin(e.t * 1.3 + e.phase) * e.amp;
       if (e.x < W - 40) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = e.def.fireInterval / g.fireRate; if (e.hp < e.maxHp * 0.6) e.shootRing(g, 10, 140, e.t); else e.shootAimed(g, 170, 3, 0.35); } }
@@ -1131,19 +1133,19 @@ const ENEMY_TYPES = {
       if (e.state === 0) { e.x -= 230 * dt; if (e.x < W - 90) { e.state = 1; e.stateT = 0; } }
       else if (e.state === 1) {
         e.stateT += dt; e.squash = Math.sin(e.stateT * 40) * 0.08; e.angry = true;
-        if (e.stateT > 0.85) { e.state = 2; const a = Math.atan2(g.player.y - e.y, g.player.x - e.x); e.vx = Math.cos(a) * e.speed; e.vy = Math.sin(a) * e.speed; }
+        if (e.stateT > 0.85) { e.state = 2; const a = Math.atan2(g.player.y - e.y, g.player.x - e.x); e.vx = Math.cos(a) * e.speed; e.vy = Math.sin(a) * e.speed; e.shootAimed(g, 230, 2, 0.5); }
       } else { e.x += e.vx * dt; e.y += e.vy * dt; if (Math.random() < 0.5) g.particles.add({ type: 'circle', x: e.x, y: e.y, size: 5, color: puyoColor(e.color).light, life: 0.3, shrink: true, alpha: 0.6 }); }
     },
   },
   spinner: {
-    hp: 24, r: 17, speed: 90, score: 150, fireInterval: 2.6,
-    init(e, o) { e.cx = o.cx; e.cy = o.cy; e.ang = o.ang; e.rad = o.rad; e.spin = o.spin; e.fireTimer = 2.2; },
+    hp: 24, r: 17, speed: 90, score: 150, fireInterval: 1.9,
+    init(e, o) { e.cx = o.cx; e.cy = o.cy; e.ang = o.ang; e.rad = o.rad; e.spin = o.spin; e.fireTimer = rand(0.6, 1.6); },
     update(e, dt, g) {
       e.cx -= e.speed * dt; e.ang += e.spin * dt; e.x = e.cx + Math.cos(e.ang) * e.rad; e.y = e.cy + Math.sin(e.ang) * e.rad;
       if (e.cx < W - 60) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = e.def.fireInterval / g.fireRate; e.shoot(g, e.ang, 160); } }
     },
   },
-  ojama: { hp: 112, r: 26, speed: 60, score: 400, amp: 10, noChain: true, dropChance: 0.6, init(e) { e.color = -1; }, update(e, dt) { e.x -= e.speed * dt; e.y = e.baseY + Math.sin(e.t + e.phase) * e.amp; } },
+  ojama: { hp: 112, r: 26, speed: 60, score: 400, amp: 10, noChain: true, dropChance: 0.6, fireInterval: 2.8, init(e) { e.color = -1; }, update(e, dt, g) { e.x -= e.speed * dt; e.y = e.baseY + Math.sin(e.t + e.phase) * e.amp; if (e.x < W - 40) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = e.def.fireInterval / g.fireRate; e.shootAimed(g, 160, 3, 0.4); } } } },
   bouncer: {
     hp: 27, r: 18, speed: 210, score: 180,
     init(e, o) { e.vx = -e.speed; e.vy = (o.dir || 1) * e.speed * 0.9; },
@@ -1152,16 +1154,16 @@ const ENEMY_TYPES = {
       let hit = false;
       if (e.y < 60 + e.r) { e.y = 60 + e.r; e.vy = Math.abs(e.vy); hit = true; }
       if (e.y > H - 20 - e.r) { e.y = H - 20 - e.r; e.vy = -Math.abs(e.vy); hit = true; }
-      if (hit) { e.squash = 0.2; if (e.x < W - 30 && Math.random() < 0.65) e.shootAimed(g, 200, 1, 0); }
+      if (hit) { e.squash = 0.2; if (e.x < W - 30 && Math.random() < 0.85) e.shootAimed(g, 200, 1, 0); }
     },
   },
   homer: {
     hp: 30, r: 19, speed: 175, score: 220,
     init(e) { e.vx = -160; e.vy = 0; },
-    update(e, dt, g) { const p = g.player, a = Math.atan2(p.y - e.y, p.x - e.x); e.vx += (Math.cos(a) * e.speed - e.vx) * 1.4 * dt; e.vy += (Math.sin(a) * e.speed - e.vy) * 1.4 * dt; e.x += e.vx * dt; e.y += e.vy * dt; },
+    update(e, dt, g) { const p = g.player, a = Math.atan2(p.y - e.y, p.x - e.x); e.vx += (Math.cos(a) * e.speed - e.vx) * 1.4 * dt; e.vy += (Math.sin(a) * e.speed - e.vy) * 1.4 * dt; e.x += e.vx * dt; e.y += e.vy * dt; if (e.x < W - 40) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = 1.6 / g.fireRate; e.shootAimed(g, 210, 1, 0); } } },
   },
   turret: {
-    hp: 72, r: 22, speed: 0, score: 300, fireInterval: 1.9,
+    hp: 72, r: 22, speed: 0, score: 300, fireInterval: 1.6,
     init(e, o) { e.top = !!o.top; e.y = e.top ? 44 + e.r * 0.55 : H - e.r * 0.55; e.shots = 0; },
     update(e, dt, g) {
       e.x -= g.scrollSpeed * 1.5 * dt;
@@ -1175,7 +1177,7 @@ const ENEMY_TYPES = {
       }
     },
   },
-  wall: { hp: 33, r: 20, speed: 130, score: 80, init(e, o) { e.speed = o.speed || 130; }, update(e, dt) { e.x -= e.speed * dt; } },
+  wall: { hp: 33, r: 20, speed: 130, score: 80, fireInterval: 3.4, init(e, o) { e.speed = o.speed || 130; e.fireTimer = rand(0.5, 2); }, update(e, dt, g) { e.x -= e.speed * dt; if (e.x < W - 40) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = rand(2.6, 4.2) / g.fireRate; if (Math.random() < 0.25) e.shootAimed(g, 170, 1, 0); } } } },
   rainbow: { hp: 33, r: 20, speed: 135, score: 800, dropChance: 1, amp: 42, update(e, dt) { e.x -= e.speed * dt; e.y = e.baseY + Math.sin(e.t * 2.6 + e.phase) * e.amp; } },
   carrier: { hp: 98, r: 24, speed: 55, score: 300, dropChance: 1, amp: 14, update(e, dt) { e.x -= e.speed * dt; e.y = e.baseY + Math.sin(e.t * 1.2 + e.phase) * e.amp; } },
   // 停止してリング弾を撃つ
@@ -1213,6 +1215,7 @@ const ENEMY_TYPES = {
       else if (e.state === 1) {
         e.ang += 3.2 * dt; e.x = e.cx - Math.sin(e.ang) * 70; e.y = e.cy + e.dir * Math.cos(e.ang) * 70;
         if (!e.fired && e.ang > Math.PI) { e.fired = true; e.shootAimed(g, 220, 3, 0.3); }
+        if (!e.fired2 && e.ang > Math.PI * 1.7) { e.fired2 = true; e.shootAimed(g, 240, 1, 0); }
         if (e.ang >= TAU) e.state = 2;
       } else e.x -= e.speed * 1.2 * dt;
     },
@@ -1813,10 +1816,10 @@ const SP = {
 
 // ---- 出現パターン（min: 登場する最初のステージ番号） ----
 const PATTERNS = [
-  { k: 'line', min: 0, w: 4, gap: 3.4, fn: SP.line }, { k: 'formation', min: 0, w: 4, gap: 3.5, fn: SP.formation }, { k: 'shooter', min: 0, w: 2.5, gap: 4, fn: SP.shooter },
+  { k: 'line', min: 0, w: 4, gap: 3.4, fn: SP.line }, { k: 'formation', min: 0, w: 4, gap: 3.5, fn: SP.formation }, { k: 'shooter', min: 0, w: 3.2, gap: 3.6, fn: SP.shooter },
   { k: 'big', min: 0, w: 1.5, gap: 4.6, fn: SP.big }, { k: 'colorBurst', min: 0, w: 2, gap: 3.4, fn: SP.colorBurst }, { k: 'spinner', min: 0, w: 1.5, gap: 4, fn: SP.spinner },
   { k: 'dasher', min: 0, w: 1, gap: 3, fn: SP.dasher }, { k: 'snake', min: 0, w: 1.5, gap: 3.5, fn: SP.snake }, { k: 'loopers', min: 0, w: 1.5, gap: 3.6, fn: SP.loopers },
-  { k: 'zigzags', min: 0, w: 1, gap: 3.4, fn: SP.zigzags }, { k: 'ringer', min: 0, w: 1.2, gap: 4.2, fn: SP.ringer }, { k: 'wavers', min: 0, w: 1, gap: 3.8, fn: SP.wavers },
+  { k: 'zigzags', min: 0, w: 1, gap: 3.4, fn: SP.zigzags }, { k: 'ringer', min: 0, w: 1.6, gap: 3.8, fn: SP.ringer }, { k: 'wavers', min: 0, w: 1, gap: 3.8, fn: SP.wavers },
   { k: 'bouncers', min: 1, w: 2, gap: 3, fn: SP.bouncers }, { k: 'wall', min: 1, w: 2, gap: 4.5, fn: SP.wall }, { k: 'dashers', min: 1, w: 1, gap: 3.4, fn: SP.dashers },
   { k: 'ojama', min: 1, w: 1, gap: 4, fn: SP.ojama }, { k: 'mixedCluster', min: 1, w: 1.5, gap: 3.6, fn: SP.mixedCluster }, { k: 'sniper', min: 1, w: 1.5, gap: 4.2, fn: SP.sniper },
   { k: 'divers', min: 1, w: 1.5, gap: 3.6, fn: SP.divers }, { k: 'ambushers', min: 1, w: 1, gap: 3.8, fn: SP.ambushers }, { k: 'bombers', min: 1, w: 1, gap: 4, fn: SP.bombers },
@@ -2275,7 +2278,8 @@ const DIFFS = [
   { name: 'ふつう', hp: 1.0, bspeed: 1.0, fire: 1.0, lives: 3, bombs: 3, color: '#5EC8FF' },
   { name: 'むずかしい', hp: 1.5, bspeed: 1.3, fire: 1.55, lives: 2, bombs: 2, color: '#FF5E7A' },
 ];
-const PLAYER_DMG_SCALE = 0.5; // 自機の全弾ダメージ係数
+const PLAYER_DMG_SCALE = 1.0; // 自機の全弾ダメージ係数（武器ごとの数値で調整済み）
+const ENEMY_HP_SCALE = 1.25; // 通常の敵の HP 係数
 const CHAIN_WORDS = [[12, 'きせき！！！'], [9, 'ばくはつ！！'], [7, 'すごい！！'], [5, 'ナイス！'], [3, 'いいね！'], [0, '']];
 
 class Game {
@@ -2318,7 +2322,7 @@ class Game {
   }
   addEBullet(b) { this.ebullets.push(b); }
   spawnEnemy(e) {
-    if (!e.isBoss) { const mul = this.diff.hp * STAGES[this.stageIndex].hpMul; e.maxHp *= mul; e.hp = e.maxHp; }
+    if (!e.isBoss) { const mul = this.diff.hp * STAGES[this.stageIndex].hpMul * ENEMY_HP_SCALE; e.maxHp *= mul; e.hp = e.maxHp; }
     this.enemies.push(e);
   }
   spawnItem(key, x, y) { if (!ITEMS[key]) return; this.items.push(new Item(key, x, y)); }
@@ -2412,7 +2416,7 @@ class Game {
     this.startStage(this.startStageSel);
   }
   startStage(i) {
-    this.fireRate = this.diff.fire * 0.7; this.progress = 0;
+    this.fireRate = this.diff.fire * 0.85; this.progress = 0;
     this.stageIndex = i; const st = STAGES[i];
     if (i > this.reached) { this.reached = i; try { localStorage.setItem('tetorisu_reached', String(i)); } catch (e) { /* ignore */ } }
     this.scrollSpeed = st.scroll; this.waves = generateWaves(i); this.waveIdx = 0; this.stageTime = 0; this.phase = 'waves'; this.phaseT = 0;
@@ -2492,7 +2496,7 @@ class Game {
     this.enemyTime = p.timers.slow > 0 ? 0.45 : 1;
     // ステージ内の進行度：敵の射撃頻度は序盤ひかえめ → 終盤に向けて激しく
     this.progress = this.phase === 'waves' ? clamp(this.stageTime / st.duration, 0, 1) : 1;
-    this.fireRate = this.diff.fire * (0.7 + 0.55 * this.progress);
+    this.fireRate = this.diff.fire * (0.85 + 0.45 * this.progress);
     if (this.feverT > 0) { this.feverT -= dt; this.fever = 100 * this.feverT / 9; if (this.feverT <= 0) { this.fever = 0; this.dmgMul = 1; } }
     // フェーズ
     this.phaseT += dt;
