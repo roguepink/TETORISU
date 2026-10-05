@@ -1,4 +1,10 @@
 html, body { margin: 0; padding: 0; height: 100%; background: #0c0618; overflow: hidden; }
-body { display: flex; align-items: center; justify-content: center; font-family: 'M PLUS Rounded 1c', sans-serif; }
-#wrap { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+body { display: flex; align-items: center; justify-content: center; font-family: 'M PLUS Rounded 1c', sans-serif; height: 100dvh; }
+#wrap { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
+#fs { position: fixed; right: 8px; bottom: 8px; z-index: 10; padding: 6px 12px; border: 0; border-radius: 999px; background: rgba(255,255,255,0.55); color: #2a1838; font: bold 13px 'M PLUS Rounded 1c', sans-serif; cursor: pointer; opacity: 0.85; }
+#fs:hover { opacity: 1; background: #fff; }
+:fullscreen #fs, :-webkit-full-screen #fs, #fs.hidden { display: none; }
+#rotate { display: none; position: fixed; left: 50%; top: 10px; transform: translateX(-50%); z-index: 10; padding: 8px 14px; border-radius: 999px; background: rgba(255,255,255,0.9); color: #2a1838; font: bold 13px 'M PLUS Rounded 1c', sans-serif; white-space: nowrap; pointer-events: none; }
+@media (orientation: portrait) and (max-width: 900px) { #rotate { display: block; } }
+@media (pointer: coarse) { #fs { right: auto; left: 8px; bottom: 8px; } }
 canvas { display: block; background: #0c0618; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; image-rendering: auto; border-radius: 6px; box-shadow: 0 0 40px rgba(120, 60, 200, 0.35); }
