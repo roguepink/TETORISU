@@ -42,7 +42,8 @@ class Bullet {
         }
         this.vx = Math.cos(ang) * this.speed; this.vy = Math.sin(ang) * this.speed;
         this.x += this.vx * dt; this.y += this.vy * dt; this.rot = ang;
-        if (Math.random() < 0.5) g.particles.add({ type: 'circle', x: this.x, y: this.y, size: 3, color: this.color, life: 0.25, shrink: true, alpha: 0.6 });
+        if (this.cute) { if (Math.random() < 0.7) g.particles.add({ type: 'star', x: this.x - 6, y: this.y + rand(-3, 3), vx: -60, vy: rand(-20, 20), size: rand(2.5, 4.5), color: Math.random() < 0.5 ? '#fff' : this.color, life: 0.35, shrink: true, vr: 6 }); }
+        else if (Math.random() < 0.5) g.particles.add({ type: 'circle', x: this.x, y: this.y, size: 3, color: this.color, life: 0.25, shrink: true, alpha: 0.6 });
         break;
       }
       case 'split':
@@ -96,6 +97,10 @@ class Bullet {
   }
   draw(ctx) {
     const col = this.rainbow ? rainbowColor(this.age * 3 + this.id * 0.3) : this.color;
+    if (this.cute) { // お供ミノのハート型ミサイル
+      ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rot + Math.PI / 2); ctx.shadowColor = col; ctx.shadowBlur = 8;
+      drawHeart(ctx, 0, 0, this.size * 0.75, col); ctx.restore(); return;
+    }
     if (this.big) {
       ctx.save(); ctx.globalAlpha = 0.35; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(this.x, this.y, this.r * 1.1, 0, TAU); ctx.fill(); ctx.restore();
     }
@@ -208,9 +213,9 @@ function fireChargeShot(g, p, w, lv, ratio) {
   Sound.sfx.chargeShot(); g.shake(8);
   fxMinoBurst(g.particles, p.x + 60, p.y, w.rainbow ? '#fff' : w.color, 10);
 }
-// オプション弾 / リアショット / ミサイル
-function fireOptionShot(g, x, y, color, lv) {
-  g.addBullet(new Bullet({ x: x + 10, y, vx: 900, dmg: 3 + lv, size: 6, shape: SHAPES.M, color, vr: 12 }));
+// お供ミノの誘導ミサイル（弱めだが確実に当たる） / リアショット / ミサイル
+function fireOptionMissile(g, x, y, color, lv) {
+  g.addBullet(new Bullet({ x: x + 8, y, vx: 380, vy: rand(-120, 120), speed: 540 + lv * 15, dmg: 4 + lv * 1.5, size: 8, shape: SHAPES.M, color, kind: 'homing', turn: 5, life: 2.4, cute: true }));
 }
 function fireRearShot(g, p, color, lv) {
   for (const oy of [-8, 8]) g.addBullet(new Bullet({ x: p.x - 24, y: p.y + oy, vx: -800, vy: oy * 3, dmg: 4 + lv, size: 7, shape: SHAPES.D, color, vr: 8 }));

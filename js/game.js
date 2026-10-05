@@ -5,7 +5,7 @@ const DIFFS = [
   { name: 'ふつう', hp: 1.0, bspeed: 1.0, fire: 1.0, lives: 3, bombs: 3, color: '#5EC8FF' },
   { name: 'むずかしい', hp: 1.5, bspeed: 1.3, fire: 1.55, lives: 2, bombs: 2, color: '#FF5E7A' },
 ];
-const PLAYER_DMG_SCALE = 0.68; // 自機の全弾ダメージ係数
+const PLAYER_DMG_SCALE = 0.5; // 自機の全弾ダメージ係数
 const CHAIN_WORDS = [[12, 'きせき！！！'], [9, 'ばくはつ！！'], [7, 'すごい！！'], [5, 'ナイス！'], [3, 'いいね！'], [0, '']];
 
 class Game {
@@ -22,10 +22,12 @@ class Game {
     this.score = 0; this.stageStartScore = 0; this.hi = 0; try { this.hi = parseInt(localStorage.getItem('tetorisu_hi') || '0', 10) || 0; } catch (e) { /* ストレージ不可の環境 */ }
     this.shakeAmt = 0; this.shakeX = 0; this.shakeY = 0; this.flash = 0;
     this.chainCount = 0; this.chainShowT = 0; this.maxChain = 0; this.popCount = 0; this.stagePop = 0; this.stageMaxChain = 0; this.stageDeaths = 0;
-    this.fever = 0; this.feverT = 0; this.dmgMul = 1; this.enemyTime = 1; this.hitStop = 0;
+    this.fever = 0; this.feverT = 0; this.dmgMul = 1; this.enemyTime = 1; this.hitStop = 0; this.fireRate = 1; this.progress = 0;
     this.bombT = -1; this.bombGrid = null; this.optionFire = false;
     this.bosses = []; this.bossDiePos = []; this.bossExplodeAcc = 0;
     this.titleCursor = 1; this.paused = false; this.clearBonus = 0;
+    this.reached = 0; try { this.reached = clamp(parseInt(localStorage.getItem('tetorisu_reached') || '0', 10) || 0, 0, STAGES.length - 1); } catch (e) { /* ignore */ }
+    this.startStageSel = 0;
     this.titlePuyos = Array.from({ length: 9 }, (_, i) => ({ x: rand(60, W - 60), y: rand(80, H - 60), r: rand(22, 40), c: i % 5, vx: rand(-60, 60), vy: rand(-40, 40), ph: rand(TAU) }));
     this.allClear = false;
   }
@@ -125,7 +127,7 @@ class Game {
     }
     if (e.boss && !e.boss.dead) { e.boss.takeDamage(40 + chain * 20, this); this.texts.add(e.boss.x, e.boss.y - e.boss.r - 20, 'いたい！', '#fff', 18, { pop: true }); }
     let key = e.drop;
-    if (!key && Math.random() < e.dropChance + chain * 0.008) key = randomItemKey(this);
+    if (!key && Math.random() < e.dropChance + chain * 0.005) key = randomItemKey(this);
     if (key) this.spawnItem(key, e.x, e.y);
   }
   // ---------- 状態遷移 ----------
@@ -137,10 +139,12 @@ class Game {
     this.diff = DIFFS[this.diffIndex]; this.player.resetAll(this.diffIndex);
     this.score = 0; this.maxChain = 0; this.popCount = 0; this.allClear = false;
     Sound.sfx.start();
-    this.startStage(0);
+    this.startStage(this.startStageSel);
   }
   startStage(i) {
+    this.fireRate = this.diff.fire * 0.7; this.progress = 0;
     this.stageIndex = i; const st = STAGES[i];
+    if (i > this.reached) { this.reached = i; try { localStorage.setItem('tetorisu_reached', String(i)); } catch (e) { /* ignore */ } }
     this.scrollSpeed = st.scroll; this.waves = generateWaves(i); this.waveIdx = 0; this.stageTime = 0; this.phase = 'waves'; this.phaseT = 0;
     this.bullets.length = 0; this.enemies.length = 0; this.ebullets.length = 0; this.items.length = 0; this.particles.clear(); this.texts.clear();
     this.bosses = []; this.bombT = -1; this.hitStop = 0; this.feverT = 0; this.fever = Math.min(this.fever, 60); this.dmgMul = 1; this.stagePop = 0; this.stageMaxChain = 0; this.stageDeaths = 0; this.chainShowT = 0;
@@ -200,6 +204,8 @@ class Game {
     this.particles.update(dt); this.texts.update(dt);
     if (Input.hit('up')) { this.titleCursor = (this.titleCursor + 2) % 3; Sound.sfx.select(); }
     if (Input.hit('down')) { this.titleCursor = (this.titleCursor + 1) % 3; Sound.sfx.select(); }
+    if (Input.hit('left') && this.reached > 0) { this.startStageSel = (this.startStageSel + this.reached) % (this.reached + 1); Sound.sfx.select(); }
+    if (Input.hit('right') && this.reached > 0) { this.startStageSel = (this.startStageSel + 1) % (this.reached + 1); Sound.sfx.select(); }
     if (Input.hit('confirm') && this.stateT > 0.5) { this.diffIndex = this.titleCursor; Sound.ensure(); Sound.resume(); this.startGame(); }
   }
   updateIntro(dt) {
@@ -214,6 +220,9 @@ class Game {
     const p = this.player, st = STAGES[this.stageIndex];
     this.scroll += this.scrollSpeed * dt;
     this.enemyTime = p.timers.slow > 0 ? 0.45 : 1;
+    // ステージ内の進行度：敵の射撃頻度は序盤ひかえめ → 終盤に向けて激しく
+    this.progress = this.phase === 'waves' ? clamp(this.stageTime / st.duration, 0, 1) : 1;
+    this.fireRate = this.diff.fire * (0.7 + 0.55 * this.progress);
     if (this.feverT > 0) { this.feverT -= dt; this.fever = 100 * this.feverT / 9; if (this.feverT <= 0) { this.fever = 0; this.dmgMul = 1; } }
     // フェーズ
     this.phaseT += dt;
@@ -235,7 +244,7 @@ class Game {
         this.shake(6);
       }
       if (this.phaseT > 2.6) {
-        for (const b of this.bossDiePos) { fxPuyoPop(this.particles, b.x, b.y, b.r * 1.6, puyoColor(b.c), 8); fxMinoBurst(this.particles, b.x, b.y, '#fff', 20); for (let i = 0; i < 6; i++) this.spawnItem(pick(['coin', 'coin', 'gem', 'heal', 'power']), b.x + rand(-40, 40), b.y + rand(-40, 40)); }
+        for (const b of this.bossDiePos) { fxPuyoPop(this.particles, b.x, b.y, b.r * 1.6, puyoColor(b.c), 8); fxMinoBurst(this.particles, b.x, b.y, '#fff', 20); for (let i = 0; i < 4; i++) this.spawnItem(pick(['coin', 'gem', 'heal', 'power']), b.x + rand(-40, 40), b.y + rand(-40, 40)); }
         this.flash = 1; Sound.sfx.explode(2); this.stageClear(); return;
       }
     }
@@ -314,7 +323,7 @@ class Game {
     for (const it of this.items) if (dist(p.x, p.y, it.x, it.y) < 34) { it.dead = true; it.def.apply(this, p); fxItemGet(this.particles, it.x, it.y, it.def.color); }
     if (Math.random() < 0.3) this.particles.add({ type: 'star', x: rand(W), y: rand(H), size: rand(3, 8), color: pick(['#fff', '#FFE066', '#FF8FB0']), life: 0.8, shrink: true, vr: 5 });
     if (this.stateT > 5.2 || (this.stateT > 2.5 && Input.hit('confirm'))) {
-      if (this.stageIndex < 4) this.startStage(this.stageIndex + 1); else this.ending();
+      if (this.stageIndex < STAGES.length - 1) this.startStage(this.stageIndex + 1); else this.ending();
     }
   }
   updateGameOver(dt) {
@@ -361,28 +370,41 @@ class Game {
     this.texts.draw(ctx);
     if (this.state === 'play' || this.state === 'clear') this.drawHUD(ctx);
     if (this.feverT > 0) this.drawFeverBorder(ctx);
+    if (this.player.alive && this.player.hurtFlash > 0) { // 被弾時の赤いビネット
+      const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.8); vg.addColorStop(0, 'rgba(255,40,80,0)'); vg.addColorStop(1, `rgba(255,40,80,${Math.min(1, this.player.hurtFlash * 2.5) * 0.55})`); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    }
+    if (this.player.alive && this.player.hp <= this.player.maxHp * 0.25 && this.state === 'play') { // HP ピンチ
+      const a = 0.25 + Math.sin(this.time * 8) * 0.2; const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, H * 0.85); vg.addColorStop(0, 'rgba(255,0,40,0)'); vg.addColorStop(1, `rgba(255,0,40,${a})`); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    }
     if (this.chainCount > 1 && this.chainShowT > 0) this.drawChain(ctx);
     if (this.phase === 'warning' && this.state === 'play') this.drawWarning(ctx);
     if (this.paused) { ctx.fillStyle = 'rgba(10,0,30,0.55)'; ctx.fillRect(0, 0, W, H); drawText(ctx, 'PAUSE', W / 2, H / 2 - 20, 56, '#fff', 'center', { outline: '#5A2A9A' }); drawText(ctx, 'P / ESC でさいかい', W / 2, H / 2 + 36, 20, '#fff'); }
   }
   drawHUD(ctx) {
-    const p = this.player;
-    ctx.fillStyle = 'rgba(20,10,45,0.55)'; ctx.fillRect(0, 0, W, 42);
+    const p = this.player, st = STAGES[this.stageIndex];
+    ctx.fillStyle = 'rgba(20,10,45,0.58)'; ctx.fillRect(0, 0, W, 42);
     // HP
-    drawHeart(ctx, 22, 21, 9, '#FF5E7A');
-    const hpw = 170, hk = clamp(p.hp / p.maxHp, 0, 1);
-    roundRectPath(ctx, 38, 13, hpw, 16, 8); ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill();
-    roundRectPath(ctx, 38, 13, hpw * hk, 16, 8); ctx.fillStyle = hk > 0.5 ? '#7ED957' : hk > 0.25 ? '#FFD84D' : '#FF5E7A'; ctx.fill();
-    drawText(ctx, `${Math.ceil(p.hp)}/${p.maxHp}`, 38 + hpw / 2, 21, 12, '#fff', 'center', { outline: 'rgba(0,0,0,0.6)', outlineWidth: 3 });
-    for (let i = 0; i < p.shield; i++) { ctx.fillStyle = '#8EE5FF'; ctx.beginPath(); ctx.arc(216 + i * 10, 21, 4, 0, TAU); ctx.fill(); }
+    drawHeart(ctx, 20, 21, 9, '#FF5E7A');
+    const hpw = 130, hk = clamp(p.hp / p.maxHp, 0, 1);
+    roundRectPath(ctx, 34, 13, hpw, 16, 8); ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill();
+    if (hk > 0) { roundRectPath(ctx, 34, 13, Math.max(10, hpw * hk), 16, 8); ctx.fillStyle = hk > 0.5 ? '#7ED957' : hk > 0.25 ? '#FFD84D' : (Math.floor(this.time * 6) % 2 ? '#FF5E7A' : '#FFB3C6'); ctx.fill(); }
+    drawText(ctx, `${Math.ceil(p.hp)}/${p.maxHp}`, 34 + hpw / 2, 21, 12, '#fff', 'center', { outline: 'rgba(0,0,0,0.6)', outlineWidth: 3 });
+    for (let i = 0; i < p.shield; i++) { ctx.fillStyle = '#8EE5FF'; ctx.beginPath(); ctx.arc(172 + i * 10, 21, 4, 0, TAU); ctx.fill(); }
     // 残機・ボム
-    for (let i = 0; i < Math.min(8, p.lives); i++) { ctx.fillStyle = '#FFF7EC'; roundRectPath(ctx, 250 + i * 18, 15, 14, 9, 4); ctx.fill(); ctx.fillStyle = '#FF8FB0'; ctx.fillRect(250 + i * 18, 24, 8, 3); }
-    drawText(ctx, '残機', 258, 34, 9, '#fff', 'left');
-    for (let i = 0; i < p.bombs; i++) drawMino(ctx, 400 + i * 16, 20, SHAPES.O, 6, MINO_COLORS.O);
-    drawText(ctx, 'BOMB(X)', 400, 35, 9, '#fff', 'left');
+    for (let i = 0; i < Math.min(6, p.lives); i++) { ctx.fillStyle = '#FFF7EC'; roundRectPath(ctx, 206 + i * 17, 14, 14, 9, 4); ctx.fill(); ctx.fillStyle = '#FF8FB0'; ctx.fillRect(206 + i * 17, 23, 8, 3); }
+    drawText(ctx, p.lives > 6 ? `残機 ×${p.lives}` : '残機', 206, 34, 9, '#fff', 'left');
+    for (let i = 0; i < Math.min(6, p.bombs); i++) drawMino(ctx, 318 + i * 14, 19, SHAPES.O, 5.5, MINO_COLORS.O);
+    drawText(ctx, p.bombs > 6 ? `BOMB ×${p.bombs}` : 'BOMB(X)', 312, 34, 9, '#fff', 'left');
+    // お供ミノ（4 スロット）
+    drawText(ctx, 'お供', 405, 34, 9, '#fff', 'left');
+    for (let i = 0; i < 4; i++) {
+      const x = 412 + i * 17, on = i < p.options;
+      if (on) { drawMino(ctx, x, 19, SHAPES.M, 12, '#FF7FAE', 0, 1, true); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x - 2.5, 18, 1.8, 0, TAU); ctx.arc(x + 2.5, 18, 1.8, 0, TAU); ctx.fill(); }
+      else { ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5; ctx.strokeRect(x - 6, 13, 12, 12); }
+    }
     // スコア
-    drawText(ctx, 'SCORE', 560, 11, 10, '#FFE3F0', 'center');
-    drawText(ctx, String(this.score).padStart(8, '0'), 560, 27, 20, '#fff', 'center', { outline: 'rgba(0,0,0,0.4)', outlineWidth: 3 });
+    drawText(ctx, 'SCORE', 560, 10, 10, '#FFE3F0', 'center');
+    drawText(ctx, String(this.score).padStart(8, '0'), 560, 26, 20, '#fff', 'center', { outline: 'rgba(0,0,0,0.4)', outlineWidth: 3 });
     drawText(ctx, `STAGE ${this.stageIndex + 1}`, 660, 21, 14, '#fff', 'center', { outline: 'rgba(0,0,0,0.5)', outlineWidth: 3 });
     // 武器パネル
     const w = p.weapon, lv = p.level, wc = w.rainbow ? rainbowColor(this.time * 3) : w.color;
@@ -392,10 +414,16 @@ class Game {
     for (let i = 0; i < 5; i++) { ctx.fillStyle = i < lv ? wc : 'rgba(255,255,255,0.25)'; roundRectPath(ctx, 758 + i * 16, 25, 12, 7, 2); ctx.fill(); }
     drawText(ctx, lv >= 5 ? 'MAX' : `Lv${lv}`, 845, 29, 11, lv >= 5 ? '#FFE066' : '#fff', 'left');
     drawText(ctx, 'Q/E切替', 900, 29, 10, 'rgba(255,255,255,0.7)', 'left');
+    // ステージ進行バー（ボスまでの距離）
+    const pk = this.phase === 'waves' ? this.progress : 1;
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(0, 42, W, 4);
+    ctx.fillStyle = this.phase === 'waves' ? '#8EE5FF' : '#FF5E7A'; ctx.fillRect(0, 42, W * pk, 4);
+    if (this.phase === 'waves') { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(W * pk, 44, 4, 0, TAU); ctx.fill(); }
+    drawText(ctx, 'BOSS', W - 20, 53, 9, this.phase === 'waves' ? 'rgba(255,255,255,0.6)' : '#FF5E7A', 'right');
     // 所持武器
     const owned = WEAPONS.filter((ww) => p.weapons[ww.key]);
     owned.forEach((ww, i) => {
-      const x = 724 + i * 24, y = 54, cur = ww.key === p.current;
+      const x = 724 + i * 24, y = 62, cur = ww.key === p.current;
       if (cur) { ctx.fillStyle = 'rgba(255,255,255,0.35)'; roundRectPath(ctx, x - 11, y - 11, 22, 22, 5); ctx.fill(); }
       drawMino(ctx, x, y, ww.key === 'R' ? SHAPES.T : ww.shape, 4.2, ww.rainbow ? rainbowColor(this.time * 3) : ww.color, 0, cur ? 1 : 0.65);
       drawText(ctx, String(p.weapons[ww.key]), x + 8, y + 8, 9, '#fff', 'center', { outline: '#000', outlineWidth: 2 });
@@ -409,20 +437,20 @@ class Game {
     const tm = [['score', '×2', '#FFE44D'], ['rapid', 'RAPID', '#FF9F6F'], ['magnet', 'MAG', '#FF6F9F'], ['slow', 'SLOW', '#B8F0FF'], ['invincible', 'ムテキ', '#fff']];
     let tx = 14;
     for (const [k, label, col] of tm) if (p.timers[k] > 0) { ctx.fillStyle = 'rgba(0,0,0,0.45)'; roundRectPath(ctx, tx, H - 30, 64, 20, 6); ctx.fill(); drawText(ctx, `${label} ${Math.ceil(p.timers[k])}`, tx + 32, H - 20, 11, col); tx += 70; }
-    if (p.speedLv > 1 || p.options || p.rear || p.missiles || p.wide) {
-      const eq = []; if (p.speedLv > 1) eq.push(`SPD${p.speedLv}`); if (p.options) eq.push(`OPT${p.options}`); if (p.rear) eq.push('REAR'); if (p.missiles) eq.push('MSL'); if (p.wide) eq.push(`WIDE${p.wide}`); if (p.chainBonus) eq.push(`CHAIN+${p.chainBonus}`);
+    if (p.speedLv > 1 || p.rear || p.missiles || p.wide || p.chainBonus) {
+      const eq = []; if (p.speedLv > 1) eq.push(`SPD${p.speedLv}`); if (p.rear) eq.push('REAR'); if (p.missiles) eq.push('MSL'); if (p.wide) eq.push(`WIDE${p.wide}`); if (p.chainBonus) eq.push(`CHAIN+${p.chainBonus}`);
       drawText(ctx, eq.join('  '), 14, H - 42, 11, 'rgba(255,255,255,0.85)', 'left', { outline: 'rgba(0,0,0,0.5)', outlineWidth: 3 });
     }
     // ボス HP
     if ((this.phase === 'boss' || this.phase === 'bossDie') && this.bosses.length) {
       let hp = 0, max = 0; for (const b of this.bosses) { hp += Math.max(0, b.hp); max += b.maxHp; }
       const bx = 180, bw = W - 360, k = clamp(hp / max, 0, 1);
-      roundRectPath(ctx, bx, 50, bw, 12, 6); ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill();
-      roundRectPath(ctx, bx, 50, bw * k, 12, 6); ctx.fillStyle = k > 0.5 ? '#FF5E7A' : '#FF2D55'; ctx.fill();
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; roundRectPath(ctx, bx, 50, bw, 12, 6); ctx.stroke();
+      roundRectPath(ctx, bx, 54, bw, 12, 6); ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill();
+      if (k > 0) { roundRectPath(ctx, bx, 54, Math.max(6, bw * k), 12, 6); ctx.fillStyle = k > 0.5 ? '#FF5E7A' : '#FF2D55'; ctx.fill(); }
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; roundRectPath(ctx, bx, 54, bw, 12, 6); ctx.stroke();
       const b0 = this.bosses[0];
-      drawText(ctx, `${b0.name}  ${b0.bdef.en}`, W / 2, 72, 13, '#fff', 'center', { outline: 'rgba(0,0,0,0.6)', outlineWidth: 3 });
-      if (b0.armorMax > 0 && b0.armorHp > 0) { roundRectPath(ctx, bx, 64, bw * (b0.armorHp / b0.armorMax), 4, 2); ctx.fillStyle = '#D8B4FF'; ctx.fill(); }
+      drawText(ctx, `${b0.name}  ${b0.bdef.en}`, W / 2, 76, 13, '#fff', 'center', { outline: 'rgba(0,0,0,0.6)', outlineWidth: 3 });
+      if (b0.armorMax > 0 && b0.armorHp > 0) { roundRectPath(ctx, bx, 68, bw * (b0.armorHp / b0.armorMax), 4, 2); ctx.fillStyle = '#FFD27A'; ctx.fill(); }
     }
   }
   drawFeverBorder(ctx) {
@@ -475,7 +503,7 @@ class Game {
     drawText(ctx, 'STAGE CLEAR!', W / 2, 120, 64 * easeOutBack(k), '#FFE066', 'center', { outline: '#5A2A9A', outlineWidth: 10 });
     const rows = [['スコア', String(this.score).padStart(8, '0')], ['最大れんさ', `${this.stageMaxChain} れんさ`], ['ポップしたぷよ', `${this.stagePop}`], ['クリアボーナス', `+${this.clearBonus}`], [this.stageDeaths === 0 ? 'ノーミス！' : 'ミス', this.stageDeaths === 0 ? '+5000' : `${this.stageDeaths} 回`]];
     rows.forEach(([a, b], i) => { if (t < 0.8 + i * 0.25) return; drawText(ctx, a, W / 2 - 40, 200 + i * 40, 22, '#FFE3F0', 'right', { outline: '#5A2A9A', outlineWidth: 5 }); drawText(ctx, b, W / 2 + 40, 200 + i * 40, 24, '#fff', 'left', { outline: '#5A2A9A', outlineWidth: 5 }); });
-    if (t > 2.5) drawText(ctx, this.stageIndex < 4 ? 'つぎのステージへ (Z)' : 'さいごのけっか (Z)', W / 2, 440, 20, `rgba(255,255,255,${0.6 + Math.sin(t * 6) * 0.4})`, 'center');
+    if (t > 2.5) drawText(ctx, this.stageIndex < STAGES.length - 1 ? 'つぎのステージへ (Z)' : 'さいごのけっか (Z)', W / 2, 440, 20, `rgba(255,255,255,${0.6 + Math.sin(t * 6) * 0.4})`, 'center');
     ctx.restore();
   }
   drawGameOver(ctx) {
@@ -501,12 +529,17 @@ class Game {
     });
     drawText(ctx, 'テトリス × ぷよぷよ × 横スクロールシューティング', W / 2, 210, 22, '#fff', 'center', { outline: '#2A1838', outlineWidth: 6 });
     drawText(ctx, 'テトロミノでぷよを打ち抜け！　同じ色をまとめてポップさせて大れんさ！', W / 2, 242, 17, '#FFE3F0', 'center', { outline: '#2A1838', outlineWidth: 5 });
+    drawText(ctx, `全 ${STAGES.length} ステージ　武器 ${WEAPONS.length} 種　ボス ${BOSS_DEFS.length} 体`, W / 2, 268, 13, 'rgba(255,255,255,0.8)', 'center', { outline: '#2A1838', outlineWidth: 4 });
     DIFFS.forEach((d, i) => {
       const y = 305 + i * 38, sel = i === this.titleCursor;
       drawText(ctx, (sel ? '▶ ' : '') + d.name + (sel ? ' ◀' : ''), W / 2, y, sel ? 28 : 22, sel ? d.color : 'rgba(255,255,255,0.75)', 'center', { outline: '#2A1838', outlineWidth: 6 });
     });
     const desc = ['残機5・敵ゆっくり。はじめての人に。', '残機3。バランスのよい難しさ。', '残機2・敵つよめ。れんさ上級者向け。'][this.titleCursor];
-    drawText(ctx, desc, W / 2, 418, 15, 'rgba(255,255,255,0.85)', 'center', { outline: '#2A1838', outlineWidth: 4 });
+    drawText(ctx, desc, W / 2, 412, 15, 'rgba(255,255,255,0.85)', 'center', { outline: '#2A1838', outlineWidth: 4 });
+    if (this.reached > 0) {
+      const ss = STAGES[this.startStageSel];
+      drawText(ctx, `◀  STAGE ${this.startStageSel + 1} ${ss.name} からスタート  ▶`, W / 2, 434, 15, '#FFE066', 'center', { outline: '#2A1838', outlineWidth: 4 });
+    }
     drawText(ctx, 'Z / ENTER / タップ でスタート', W / 2, 455, 24, `rgba(255,255,255,${0.55 + Math.sin(this.time * 5) * 0.45})`, 'center', { outline: '#2A1838', outlineWidth: 6 });
     drawText(ctx, '移動: ↑↓←→ / WASD　ショット: Z　ボム: X　チャージ: C(長押し)　武器切替: Q / E　ポーズ: P　ミュート: M', W / 2, 500, 14, '#fff', 'center', { outline: '#2A1838', outlineWidth: 4 });
     drawText(ctx, 'ゲームパッド・タッチ操作にも対応', W / 2, 522, 12, 'rgba(255,255,255,0.75)', 'center', { outline: '#2A1838', outlineWidth: 3 });
@@ -514,7 +547,7 @@ class Game {
     if (Sound.isMuted()) drawText(ctx, 'MUTE', 16, 20, 14, '#fff', 'left', { outline: '#2A1838', outlineWidth: 4 });
   }
   drawEnding(ctx) {
-    BG.draw(ctx, this, 4);
+    BG.draw(ctx, this, STAGES.length - 1);
     ctx.fillStyle = 'rgba(10,0,30,0.45)'; ctx.fillRect(0, 0, W, H);
     for (const p of this.titlePuyos) drawPuyo(ctx, p.x, p.y, p.r, puyoColor(p.c), { t: this.time, phase: p.ph, eyeDir: { x: 0, y: -0.5 } });
     this.particles.draw(ctx);
