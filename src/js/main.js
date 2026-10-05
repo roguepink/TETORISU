@@ -42,4 +42,8 @@ window.addEventListener('load', () => {
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+  // ホーム画面に追加したときにオフラインでも起動できるようにする（file:// では登録しない）
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) { /* 無視 */ }
+  }
 });
