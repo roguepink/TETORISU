@@ -11,7 +11,7 @@ const Input = (() => {
   const keys = new Set(), hits = new Set();
   let gpButtons = [], gpPrev = [], gpAxes = [0, 0];
   let anyHit = false;
-  const touch = { enabled: false, moveId: null, lx: 0, ly: 0, dx: 0, dy: 0, buttons: {}, hitsNow: new Set(), tapStart: false };
+  const touch = { enabled: false, moveId: null, lx: 0, ly: 0, dx: 0, dy: 0, buttons: {}, hitsNow: new Set(), tapStart: false, tapPos: null };
   const BTN = { bomb: { x: W - 62, y: H - 62, r: 38, label: 'BOMB' }, charge: { x: W - 158, y: H - 62, r: 38, label: 'CHG' }, next: { x: W - 62, y: H - 158, r: 30, label: 'WPN' } };
   let canvas = null;
 
@@ -37,7 +37,7 @@ const Input = (() => {
   function hitButton(p) { for (const k in BTN) { const b = BTN[k]; if (dist(p.x, p.y, b.x, b.y) <= b.r + 8) return k; } return null; }
   function onDown(e) {
     const p = toCanvas(e);
-    anyHit = true; touch.tapStart = true;
+    anyHit = true; touch.tapStart = true; touch.tapPos = p;
     if (e.pointerType === 'mouse') { // マウスは移動のみ（確認用）
       touch.moveId = e.pointerId; touch.lx = p.x; touch.ly = p.y; return;
     }
@@ -78,12 +78,19 @@ const Input = (() => {
     return false;
   }
   function hit(action) {
-    for (const k of KEYMAP[action] || []) if (hits.has(k)) return true;
-    for (const i of GP_BUTTONS[action] || []) if (gpButtons[i] && !gpPrev[i]) return true;
+    if (hitKey(action)) return true;
     if (touch.hitsNow.has(action)) return true;
     if (action === 'confirm' && touch.tapStart) return true;
     return false;
   }
+  // キーボード / ゲームパッドだけ（タップは含めない）
+  function hitKey(action) {
+    for (const k of KEYMAP[action] || []) if (hits.has(k)) return true;
+    for (const i of GP_BUTTONS[action] || []) if (gpButtons[i] && !gpPrev[i]) return true;
+    return false;
+  }
+  // このフレームにタップ／クリックされた座標（なければ null）
+  function tap() { return touch.tapPos; }
   function axis() {
     let x = 0, y = 0;
     if (down('left')) x -= 1; if (down('right')) x += 1; if (down('up')) y -= 1; if (down('down')) y += 1;
@@ -92,7 +99,7 @@ const Input = (() => {
     return { x, y };
   }
   function consumeTouchDelta() { const d = { x: touch.dx, y: touch.dy }; touch.dx = 0; touch.dy = 0; return d; }
-  function endFrame() { hits.clear(); touch.hitsNow.clear(); touch.tapStart = false; anyHit = false; }
+  function endFrame() { hits.clear(); touch.hitsNow.clear(); touch.tapStart = false; touch.tapPos = null; anyHit = false; }
   function consumeAnyHit() { const a = anyHit; anyHit = false; return a; }
   function drawTouchUI(ctx) {
     if (!touch.enabled) return;
@@ -104,5 +111,5 @@ const Input = (() => {
       ctx.restore();
     }
   }
-  return { init, down, hit, axis, pollGamepad, endFrame, consumeAnyHit, consumeTouchDelta, drawTouchUI, touch };
+  return { init, down, hit, hitKey, tap, axis, pollGamepad, endFrame, consumeAnyHit, consumeTouchDelta, drawTouchUI, touch };
 })();
