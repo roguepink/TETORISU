@@ -5,6 +5,7 @@ const DIFFS = [
   { name: 'ふつう', hp: 1.0, bspeed: 1.0, fire: 1.0, lives: 3, bombs: 3, color: '#5EC8FF' },
   { name: 'むずかしい', hp: 1.5, bspeed: 1.3, fire: 1.55, lives: 2, bombs: 2, color: '#FF5E7A' },
 ];
+const PLAYER_DMG_SCALE = 0.68; // 自機の全弾ダメージ係数
 const CHAIN_WORDS = [[12, 'きせき！！！'], [9, 'ばくはつ！！'], [7, 'すごい！！'], [5, 'ナイス！'], [3, 'いいね！'], [0, '']];
 
 class Game {
@@ -18,11 +19,11 @@ class Game {
     this.player = new Player(this);
     this.state = 'title'; this.stateT = 0; this.time = 0; this.scroll = 0; this.scrollSpeed = 60;
     this.stageIndex = 0; this.waves = []; this.waveIdx = 0; this.stageTime = 0; this.phase = 'waves'; this.phaseT = 0;
-    this.score = 0; this.stageStartScore = 0; this.hi = parseInt(localStorage.getItem('tetorisu_hi') || '0', 10) || 0;
+    this.score = 0; this.stageStartScore = 0; this.hi = 0; try { this.hi = parseInt(localStorage.getItem('tetorisu_hi') || '0', 10) || 0; } catch (e) { /* ストレージ不可の環境 */ }
     this.shakeAmt = 0; this.shakeX = 0; this.shakeY = 0; this.flash = 0;
     this.chainCount = 0; this.chainShowT = 0; this.maxChain = 0; this.popCount = 0; this.stagePop = 0; this.stageMaxChain = 0; this.stageDeaths = 0;
     this.fever = 0; this.feverT = 0; this.dmgMul = 1; this.enemyTime = 1; this.hitStop = 0;
-    this.bombT = -1; this.bombGrid = null;
+    this.bombT = -1; this.bombGrid = null; this.optionFire = false;
     this.bosses = []; this.bossDiePos = []; this.bossExplodeAcc = 0;
     this.titleCursor = 1; this.paused = false; this.clearBonus = 0;
     this.titlePuyos = Array.from({ length: 9 }, (_, i) => ({ x: rand(60, W - 60), y: rand(80, H - 60), r: rand(22, 40), c: i % 5, vx: rand(-60, 60), vy: rand(-40, 40), ph: rand(TAU) }));
@@ -37,7 +38,10 @@ class Game {
   }
   addBullet(b) {
     const p = this.player;
-    if (p.wide > 0 && !b.big) { b.size *= 1 + 0.14 * p.wide; b.r = shapeRadius(b.shape, b.size) * 0.85; }
+    b.dmg *= PLAYER_DMG_SCALE;
+    if (this.optionFire) { b.dmg *= 0.45; b.size *= 0.72; b.fromOption = true; }
+    else if (p.wide > 0 && !b.big) b.size *= 1 + 0.14 * p.wide;
+    b.r = shapeRadius(b.shape, b.size) * 0.85;
     this.bullets.push(b);
   }
   addEBullet(b) { this.ebullets.push(b); }
@@ -121,7 +125,7 @@ class Game {
     }
     if (e.boss && !e.boss.dead) { e.boss.takeDamage(40 + chain * 20, this); this.texts.add(e.boss.x, e.boss.y - e.boss.r - 20, 'いたい！', '#fff', 18, { pop: true }); }
     let key = e.drop;
-    if (!key && Math.random() < e.dropChance + chain * 0.05) key = randomItemKey(this);
+    if (!key && Math.random() < e.dropChance + chain * 0.008) key = randomItemKey(this);
     if (key) this.spawnItem(key, e.x, e.y);
   }
   // ---------- 状態遷移 ----------
@@ -231,7 +235,7 @@ class Game {
         this.shake(6);
       }
       if (this.phaseT > 2.6) {
-        for (const b of this.bossDiePos) { fxPuyoPop(this.particles, b.x, b.y, b.r * 1.6, puyoColor(b.c), 8); fxMinoBurst(this.particles, b.x, b.y, '#fff', 20); for (let i = 0; i < 10; i++) this.spawnItem(pick(['coin', 'coin', 'gem', 'heal', 'power']), b.x + rand(-40, 40), b.y + rand(-40, 40)); }
+        for (const b of this.bossDiePos) { fxPuyoPop(this.particles, b.x, b.y, b.r * 1.6, puyoColor(b.c), 8); fxMinoBurst(this.particles, b.x, b.y, '#fff', 20); for (let i = 0; i < 6; i++) this.spawnItem(pick(['coin', 'coin', 'gem', 'heal', 'power']), b.x + rand(-40, 40), b.y + rand(-40, 40)); }
         this.flash = 1; Sound.sfx.explode(2); this.stageClear(); return;
       }
     }

@@ -11,7 +11,7 @@ class Player {
     this.timers = { score: 0, rapid: 0, magnet: 0, slow: 0, invincible: 0 };
     this.x = 120; this.y = H / 2; this.vx = 0; this.vy = 0; this.alive = true; this.inv = 0; this.hurtFlash = 0;
     this.fireTimer = 0; this.fireCount = 0; this.missileTimer = 0; this.charge = 0; this.charging = false; this.chargeReady = false; this.chargeTick = 0;
-    this.t = 0; this.blinkT = 2; this.blink = false; this.entering = false; this.respawnT = 0; this.optionAng = 0;
+    this.t = 0; this.blinkT = 2; this.blink = false; this.entering = false; this.respawnT = 0; this.optionAng = 0; this.optPos = []; this.optionTimer = 0;
   }
   respawn() {
     this.alive = true; this.hp = this.maxHp; this.x = -60; this.y = H / 2; this.inv = 3.2; this.entering = true; this.charge = 0; this.chargeReady = false;
@@ -72,7 +72,7 @@ class Player {
     fxExplosion(this.g.particles, this.x, this.y, 50, '#FFB7C5');
     for (let i = 0; i < 12; i++) fxMinoBurst(this.g.particles, this.x, this.y, pick(Object.values(MINO_COLORS)), 2);
     // 装備ロスト
-    this.options = Math.max(0, this.options - 2); this.shield = 0; this.missiles = false; this.rear = false;
+    this.options = Math.max(0, this.options - 1); this.shield = 0; this.missiles = false; this.rear = false;
     if (this.level > 1) this.weapons[this.current]--;
     for (const k in this.timers) this.timers[k] = 0;
   }
@@ -105,10 +105,23 @@ class Player {
         this.fireTimer = cd; this.fireCount++;
         Sound.sfx.shoot(WEAPON_INDEX[this.current]);
         const col = w.rainbow ? rainbowColor(this.t * 3) : w.color;
-        for (let i = 0; i < this.options; i++) { const p = this.optionPos(i); fireOptionShot(g, p.x, p.y, col, lv); }
         if (this.rear && this.fireCount % 2 === 0) fireRearShot(g, this, col, lv);
       }
     } else if (this.fireTimer < 0) this.fireTimer = 0;
+    // オプション（お供ミノ）：機体の周りに最大 4 つ。少し遅れて追従し、弱めの本体武器を撃つ
+    const slots = [[-38, -42], [-38, 42], [-66, -22], [-66, 22]];
+    while (this.optPos.length < this.options) this.optPos.push({ x: this.x - 40, y: this.y });
+    this.optPos.length = this.options;
+    for (let i = 0; i < this.options; i++) {
+      const o = this.optPos[i], tx = this.x + slots[i][0], ty = this.y + slots[i][1] + Math.sin(this.t * 4 + i * 1.5) * 4, k = Math.min(1, 9 * dt);
+      o.x += (tx - o.x) * k; o.y += (ty - o.y) * k;
+    }
+    this.optionTimer -= dt;
+    if (this.options > 0 && Input.down('fire') && !this.entering && this.optionTimer <= 0) {
+      this.optionTimer = w.cooldown(1) * 2.1 * (this.timers.rapid > 0 ? 0.7 : 1) * (g.feverT > 0 ? 0.8 : 1);
+      g.optionFire = true;
+      try { for (const o of this.optPos) w.fire(g, { x: o.x + 4, y: o.y }, lv >= 4 ? 2 : 1); } finally { g.optionFire = false; }
+    }
     if (this.missiles) { this.missileTimer -= dt; if (this.missileTimer <= 0 && Input.down('fire')) { this.missileTimer = 0.5; fireMissiles(g, this, w.rainbow ? '#fff' : w.color, lv); } }
     // チャージ
     const chg = Input.down('charge') && !this.entering;
@@ -127,15 +140,17 @@ class Player {
     if (Input.hit('prev')) this.switchWeapon(-1);
     if (Input.hit('next')) this.switchWeapon(1);
   }
-  optionPos(i) {
-    const n = this.options, a = this.optionAng + (i / n) * TAU;
-    return { x: this.x + Math.cos(a) * 42, y: this.y + Math.sin(a) * 30 };
-  }
+  optionPos(i) { return this.optPos[i] || { x: this.x - 40, y: this.y }; }
   draw(ctx) {
     if (!this.alive) return;
     const g = this.g, t = this.t, w = this.weapon, wcol = w.rainbow ? rainbowColor(t * 3) : w.color;
     // オプション
-    for (let i = 0; i < this.options; i++) { const p = this.optionPos(i); drawMino(ctx, p.x, p.y, SHAPES.M, 11, wcol, t * 4 + i, 1, true); }
+    for (let i = 0; i < this.options; i++) { // お供ミノ（顔つき）
+      const p = this.optionPos(i);
+      drawMino(ctx, p.x, p.y, SHAPES.M, 16, wcol, Math.sin(t * 3 + i) * 0.15, 1, true);
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x - 3.5, p.y - 1, 2.8, 0, TAU); ctx.arc(p.x + 3.5, p.y - 1, 2.8, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#2A1838'; ctx.beginPath(); ctx.arc(p.x - 2.5, p.y - 1, 1.4, 0, TAU); ctx.arc(p.x + 4.5, p.y - 1, 1.4, 0, TAU); ctx.fill();
+    }
     // シールド
     if (this.shield > 0) {
       ctx.save(); ctx.globalAlpha = 0.35 + Math.sin(t * 6) * 0.08; ctx.fillStyle = '#8EE5FF'; ctx.beginPath(); ctx.arc(this.x, this.y, 44, 0, TAU); ctx.fill();
