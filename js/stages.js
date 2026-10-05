@@ -69,15 +69,41 @@ const SP = {
     const c1 = randInt(0, 4), c2 = (c1 + randInt(1, 4)) % 5, cx = W + 90, cy = rand(140, H - 140), phase = rand(TAU);
     for (let i = 0; i < 12; i++) { const col = i < 6 ? c1 : c2; g.spawnEnemy(new Enemy('cluster', cx + Math.floor(i / 3) * 44, cy + (i % 3) * 44 - 44, { color: col, phase, amp: 22, speed: 110 })); }
   },
+  ringer(g) { g.spawnEnemy(new Enemy('ringer', W + 40, rand(110, H - 90), {})); },
+  sniper(g) { g.spawnEnemy(new Enemy('sniper', W + 40, rand(100, H - 80), {})); },
+  loopers(g) { const color = randInt(0, 4), y = rand(150, H - 150), dir = Math.random() < 0.5 ? 1 : -1, loopX = rand(450, 650); for (let i = 0; i < 3; i++) g.spawnEnemy(new Enemy('looper', W + 40 + i * 70, y, { color, dir, loopX })); },
+  zigzags(g) { const color = randInt(0, 4); for (let i = 0; i < 3; i++) g.spawnEnemy(new Enemy('zigzag', W + 40 + i * 80, rand(120, H - 100), { color, dir: i % 2 ? 1 : -1 })); },
+  divers(g) { const color = randInt(0, 4), top = Math.random() < 0.5; for (let i = 0; i < 3; i++) g.spawnEnemy(new Enemy('diver', 0, 0, { color, top, x: 300 + i * 160 })); },
+  ambushers(g) { const color = randInt(0, 4); for (let i = 0; i < 2; i++) g.spawnEnemy(new Enemy('ambusher', -40, rand(120, H - 100), { color })); },
+  spiraler(g) { g.spawnEnemy(new Enemy('spiraler', W + 50, rand(140, H - 120), {})); },
+  bombers(g) { const color = randInt(0, 4), top = Math.random() < 0.5; for (let i = 0; i < 3; i++) g.spawnEnemy(new Enemy('bomber', W + 40 + i * 90, 0, { color, top })); },
+  minefield(g) { const color = randInt(0, 4); for (let i = 0; i < 5; i++) g.spawnEnemy(new Enemy('mine', W + 40 + i * 55, rand(90, H - 70), { color })); },
+  ricochets(g) { const color = randInt(0, 4); for (let i = 0; i < 2; i++) g.spawnEnemy(new Enemy('ricochet', W + 40 + i * 90, rand(120, H - 100), { color })); },
+  wavers(g) { const color = randInt(0, 4); for (let i = 0; i < 2; i++) g.spawnEnemy(new Enemy('waver', W + 40 + i * 80, rand(120, H - 100), { color })); },
   rainMinis(g) { const color = randInt(0, 4); for (let i = 0; i < 6; i++) g.spawnEnemy(new Enemy('bouncer', W + 40 + i * 50, 80, { color, dir: 1, speed: 180 })); },
 };
 
 const POOLS = [
-  [ { w: 5, gap: 3.4, fn: SP.line }, { w: 4, gap: 3.6, fn: SP.formation }, { w: 2, gap: 4.2, fn: SP.shooter }, { w: 1.5, gap: 4.6, fn: SP.big }, { w: 2.5, gap: 3.4, fn: SP.colorBurst }, { w: 1.5, gap: 4, fn: SP.spinner }, { w: 1, gap: 3, fn: SP.dasher }, { w: 1.5, gap: 3.5, fn: SP.snake } ],
-  [ { w: 4, gap: 3, fn: SP.line }, { w: 4, gap: 3.2, fn: SP.formation }, { w: 2, gap: 4, fn: SP.shooter }, { w: 2, gap: 4.4, fn: SP.big }, { w: 2.5, gap: 3.2, fn: SP.colorBurst }, { w: 2, gap: 3.6, fn: SP.spinner }, { w: 2, gap: 3, fn: SP.bouncers }, { w: 2, gap: 4.5, fn: SP.wall }, { w: 2, gap: 3.4, fn: SP.snake }, { w: 1, gap: 3.4, fn: SP.dashers }, { w: 1, gap: 4, fn: SP.ojama }, { w: 1.5, gap: 3.6, fn: SP.mixedCluster } ],
-  [ { w: 3, gap: 2.8, fn: SP.line }, { w: 3, gap: 3, fn: SP.formation }, { w: 2, gap: 3.4, fn: SP.twoFormations }, { w: 2.5, gap: 3.8, fn: SP.shooters }, { w: 2, gap: 4, fn: SP.big }, { w: 2, gap: 3, fn: SP.colorBurst }, { w: 2, gap: 3.2, fn: SP.homers }, { w: 2, gap: 4.2, fn: SP.turrets }, { w: 1.5, gap: 4.4, fn: SP.wall }, { w: 2, gap: 3, fn: SP.bouncers }, { w: 1.5, gap: 3.4, fn: SP.dashers }, { w: 1.5, gap: 3.2, fn: SP.spinner }, { w: 1, gap: 3.8, fn: SP.ojama }, { w: 1.5, gap: 3.4, fn: SP.mixedCluster }, { w: 1, gap: 3, fn: SP.rainMinis } ],
-  [ { w: 3, gap: 2.8, fn: SP.line }, { w: 3, gap: 2.9, fn: SP.formation }, { w: 2, gap: 3.4, fn: SP.twoFormations }, { w: 2, gap: 3.6, fn: SP.shooters }, { w: 2, gap: 3.8, fn: SP.twoBig }, { w: 2.5, gap: 3, fn: SP.colorBurst }, { w: 2, gap: 3.2, fn: SP.homers }, { w: 1.5, gap: 4, fn: SP.turrets }, { w: 2, gap: 4.6, fn: SP.doubleWall }, { w: 2, gap: 3.4, fn: SP.bigSpinner }, { w: 2, gap: 3.2, fn: SP.dashers }, { w: 2, gap: 3.6, fn: SP.ojamaLine }, { w: 2, gap: 3.2, fn: SP.mixedCluster }, { w: 1.5, gap: 3, fn: SP.rainMinis }, { w: 1.5, gap: 3, fn: SP.bouncers } ],
-  [ { w: 3, gap: 2.5, fn: SP.line }, { w: 3, gap: 2.6, fn: SP.formation }, { w: 3, gap: 3, fn: SP.twoFormations }, { w: 2.5, gap: 3.2, fn: SP.shooters }, { w: 2, gap: 3.4, fn: SP.twoBig }, { w: 3, gap: 2.8, fn: SP.colorBurst }, { w: 2, gap: 3, fn: SP.homers }, { w: 2, gap: 3.6, fn: SP.turrets }, { w: 2, gap: 4.2, fn: SP.doubleWall }, { w: 2, gap: 3.2, fn: SP.bigSpinner }, { w: 2.5, gap: 3, fn: SP.dashers }, { w: 2, gap: 3.4, fn: SP.ojamaLine }, { w: 2.5, gap: 3, fn: SP.mixedCluster }, { w: 2, gap: 2.8, fn: SP.rainMinis }, { w: 2, gap: 2.8, fn: SP.bouncers }, { w: 1.5, gap: 3, fn: SP.snake } ],
+  [ // 1 やさしめ：基本の敵 + 宙返り・ジグザグ・リング
+    { w: 4, gap: 3.4, fn: SP.line }, { w: 4, gap: 3.6, fn: SP.formation }, { w: 2.5, gap: 4, fn: SP.shooter }, { w: 1.5, gap: 4.6, fn: SP.big }, { w: 2, gap: 3.4, fn: SP.colorBurst }, { w: 1.5, gap: 4, fn: SP.spinner }, { w: 1, gap: 3, fn: SP.dasher }, { w: 1.5, gap: 3.5, fn: SP.snake },
+    { w: 1.5, gap: 3.6, fn: SP.loopers }, { w: 1, gap: 3.4, fn: SP.zigzags }, { w: 1.2, gap: 4.2, fn: SP.ringer }, { w: 1, gap: 3.8, fn: SP.wavers },
+  ],
+  [ // 2 跳ねる・壁・狙撃・急降下・背後
+    { w: 3, gap: 3, fn: SP.line }, { w: 3.5, gap: 3.2, fn: SP.formation }, { w: 2, gap: 4, fn: SP.shooter }, { w: 2, gap: 4.4, fn: SP.big }, { w: 2, gap: 3.2, fn: SP.colorBurst }, { w: 2, gap: 3.6, fn: SP.spinner }, { w: 2, gap: 3, fn: SP.bouncers }, { w: 2, gap: 4.5, fn: SP.wall }, { w: 1.5, gap: 3.4, fn: SP.snake }, { w: 1, gap: 3.4, fn: SP.dashers }, { w: 1, gap: 4, fn: SP.ojama }, { w: 1.5, gap: 3.6, fn: SP.mixedCluster },
+    { w: 1.5, gap: 3.6, fn: SP.loopers }, { w: 1.2, gap: 3.4, fn: SP.zigzags }, { w: 1.5, gap: 4, fn: SP.ringer }, { w: 1.5, gap: 4.2, fn: SP.sniper }, { w: 1.5, gap: 3.6, fn: SP.divers }, { w: 1, gap: 3.8, fn: SP.ambushers }, { w: 1, gap: 4, fn: SP.bombers }, { w: 1, gap: 3.8, fn: SP.ricochets }, { w: 0.8, gap: 4.4, fn: SP.minefield }, { w: 1, gap: 3.6, fn: SP.wavers },
+  ],
+  [ // 3 タレット・追尾・渦巻き・爆撃
+    { w: 2.5, gap: 2.8, fn: SP.line }, { w: 3, gap: 3, fn: SP.formation }, { w: 2, gap: 3.4, fn: SP.twoFormations }, { w: 2, gap: 3.8, fn: SP.shooters }, { w: 2, gap: 4, fn: SP.big }, { w: 2, gap: 3, fn: SP.colorBurst }, { w: 2, gap: 3.2, fn: SP.homers }, { w: 2, gap: 4.2, fn: SP.turrets }, { w: 1.5, gap: 4.4, fn: SP.wall }, { w: 2, gap: 3, fn: SP.bouncers }, { w: 1.5, gap: 3.4, fn: SP.dashers }, { w: 1.5, gap: 3.2, fn: SP.spinner }, { w: 1, gap: 3.8, fn: SP.ojama }, { w: 1.5, gap: 3.4, fn: SP.mixedCluster }, { w: 1, gap: 3, fn: SP.rainMinis },
+    { w: 2, gap: 3.4, fn: SP.loopers }, { w: 1.5, gap: 3.2, fn: SP.zigzags }, { w: 1.5, gap: 3.8, fn: SP.ringer }, { w: 2, gap: 4, fn: SP.sniper }, { w: 2, gap: 3.4, fn: SP.divers }, { w: 1.5, gap: 3.6, fn: SP.ambushers }, { w: 1.5, gap: 3.8, fn: SP.bombers }, { w: 1.5, gap: 4.2, fn: SP.spiraler }, { w: 1.5, gap: 3.6, fn: SP.ricochets }, { w: 1, gap: 4.2, fn: SP.minefield }, { w: 1.5, gap: 3.4, fn: SP.wavers },
+  ],
+  [ // 4 二重の壁・大型・おじゃま列、全種類が濃く
+    { w: 2.5, gap: 2.8, fn: SP.line }, { w: 3, gap: 2.9, fn: SP.formation }, { w: 2, gap: 3.4, fn: SP.twoFormations }, { w: 2, gap: 3.6, fn: SP.shooters }, { w: 2, gap: 3.8, fn: SP.twoBig }, { w: 2.5, gap: 3, fn: SP.colorBurst }, { w: 2, gap: 3.2, fn: SP.homers }, { w: 1.5, gap: 4, fn: SP.turrets }, { w: 2, gap: 4.6, fn: SP.doubleWall }, { w: 2, gap: 3.4, fn: SP.bigSpinner }, { w: 2, gap: 3.2, fn: SP.dashers }, { w: 2, gap: 3.6, fn: SP.ojamaLine }, { w: 2, gap: 3.2, fn: SP.mixedCluster }, { w: 1.5, gap: 3, fn: SP.rainMinis }, { w: 1.5, gap: 3, fn: SP.bouncers },
+    { w: 2, gap: 3.2, fn: SP.loopers }, { w: 2, gap: 3, fn: SP.zigzags }, { w: 2, gap: 3.6, fn: SP.ringer }, { w: 2, gap: 3.8, fn: SP.sniper }, { w: 2, gap: 3.2, fn: SP.divers }, { w: 2, gap: 3.4, fn: SP.ambushers }, { w: 2, gap: 3.6, fn: SP.bombers }, { w: 2, gap: 4, fn: SP.spiraler }, { w: 2, gap: 3.4, fn: SP.ricochets }, { w: 1.5, gap: 4, fn: SP.minefield }, { w: 2, gap: 3.2, fn: SP.wavers },
+  ],
+  [ // 5 すべて・高密度
+    { w: 2.5, gap: 2.5, fn: SP.line }, { w: 3, gap: 2.6, fn: SP.formation }, { w: 3, gap: 3, fn: SP.twoFormations }, { w: 2.5, gap: 3.2, fn: SP.shooters }, { w: 2, gap: 3.4, fn: SP.twoBig }, { w: 3, gap: 2.8, fn: SP.colorBurst }, { w: 2, gap: 3, fn: SP.homers }, { w: 2, gap: 3.6, fn: SP.turrets }, { w: 2, gap: 4.2, fn: SP.doubleWall }, { w: 2, gap: 3.2, fn: SP.bigSpinner }, { w: 2.5, gap: 3, fn: SP.dashers }, { w: 2, gap: 3.4, fn: SP.ojamaLine }, { w: 2.5, gap: 3, fn: SP.mixedCluster }, { w: 2, gap: 2.8, fn: SP.rainMinis }, { w: 2, gap: 2.8, fn: SP.bouncers }, { w: 1.5, gap: 3, fn: SP.snake },
+    { w: 2.5, gap: 3, fn: SP.loopers }, { w: 2, gap: 2.8, fn: SP.zigzags }, { w: 2, gap: 3.4, fn: SP.ringer }, { w: 2.5, gap: 3.4, fn: SP.sniper }, { w: 2.5, gap: 3, fn: SP.divers }, { w: 2, gap: 3.2, fn: SP.ambushers }, { w: 2, gap: 3.2, fn: SP.bombers }, { w: 2.5, gap: 3.6, fn: SP.spiraler }, { w: 2, gap: 3.2, fn: SP.ricochets }, { w: 2, gap: 3.6, fn: SP.minefield }, { w: 2, gap: 3, fn: SP.wavers },
+  ],
 ];
 
 function generateWaves(si) {
@@ -89,9 +115,9 @@ function generateWaves(si) {
     waves.push({ t, fn: pat.fn });
     t += (pat.gap / st.spawnMul) * (0.85 + rng() * 0.3);
   }
-  for (let ct = 7; ct < st.duration - 8; ct += 13) waves.push({ t: ct, fn: (g) => SP.carrier(g) });
-  for (let ct = 16; ct < st.duration - 8; ct += 19) waves.push({ t: ct, fn: SP.goodCarrier });
-  for (let ct = 24; ct < st.duration - 8; ct += 27) waves.push({ t: ct, fn: SP.rainbow });
+  for (let ct = 9; ct < st.duration - 8; ct += 24) waves.push({ t: ct, fn: (g) => SP.carrier(g) });
+  for (let ct = 20; ct < st.duration - 8; ct += 34) waves.push({ t: ct, fn: SP.goodCarrier });
+  for (let ct = 30; ct < st.duration - 8; ct += 40) waves.push({ t: ct, fn: SP.rainbow });
   if (si >= 1) for (let ct = 30; ct < st.duration - 8; ct += 31) waves.push({ t: ct, fn: SP.ojama });
   waves.sort((a, b) => a.t - b.t);
   return waves;
