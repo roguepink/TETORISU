@@ -7,6 +7,8 @@ const DIFFS = [
 ];
 const PLAYER_DMG_SCALE = 1.0; // 自機の全弾ダメージ係数（武器ごとの数値で調整済み）
 const ENEMY_HP_SCALE = 2.5; // 通常の敵の HP 係数（元の 1.25 の 2 倍）
+// タイトル画面のボタン配置
+const TITLE_UI = { diffY: 308, diffGap: 40, diffW: 300, diffH: 34, stageY: 448, startY: 488, startW: 340, startH: 44 };
 const CHAIN_WORDS = [[12, 'きせき！！！'], [9, 'ばくはつ！！'], [7, 'すごい！！'], [5, 'ナイス！'], [3, 'いいね！'], [0, '']];
 
 class Game {
@@ -207,7 +209,18 @@ class Game {
     if (Input.hit('down')) { this.titleCursor = (this.titleCursor + 1) % 3; Sound.sfx.select(); }
     if (Input.hit('left') && this.reached > 0) { this.startStageSel = (this.startStageSel + this.reached) % (this.reached + 1); Sound.sfx.select(); }
     if (Input.hit('right') && this.reached > 0) { this.startStageSel = (this.startStageSel + 1) % (this.reached + 1); Sound.sfx.select(); }
-    if (Input.hit('confirm') && this.stateT > 0.5) { this.diffIndex = this.titleCursor; Sound.ensure(); Sound.resume(); this.startGame(); }
+    // タップ／クリック：難易度ボタンは選ぶだけ、スタートボタンで開始
+    const tp = Input.tap(), U = TITLE_UI;
+    let start = Input.hitKey('confirm');
+    if (tp) {
+      for (let i = 0; i < 3; i++) if (Math.abs(tp.x - W / 2) <= U.diffW / 2 && Math.abs(tp.y - (U.diffY + i * U.diffGap)) <= U.diffH / 2 + 4) { if (this.titleCursor !== i) Sound.sfx.select(); this.titleCursor = i; }
+      if (this.reached > 0 && Math.abs(tp.y - U.stageY) <= 20) {
+        if (tp.x < W / 2 - 150 && tp.x > W / 2 - 260) { this.startStageSel = (this.startStageSel + this.reached) % (this.reached + 1); Sound.sfx.select(); }
+        if (tp.x > W / 2 + 150 && tp.x < W / 2 + 260) { this.startStageSel = (this.startStageSel + 1) % (this.reached + 1); Sound.sfx.select(); }
+      }
+      if (Math.abs(tp.x - W / 2) <= U.startW / 2 && Math.abs(tp.y - U.startY) <= U.startH / 2 + 6) start = true;
+    }
+    if (start && this.stateT > 0.5) { this.diffIndex = this.titleCursor; Sound.ensure(); Sound.resume(); this.startGame(); }
   }
   updateIntro(dt) {
     this.scroll += this.scrollSpeed * dt;
@@ -356,7 +369,7 @@ class Game {
     }
     ctx.restore();
     if (this.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${this.flash * 0.8})`; ctx.fillRect(0, 0, W, H); }
-    Input.drawTouchUI(ctx);
+    if (this.state === 'play' || this.state === 'intro') Input.drawTouchUI(ctx);
   }
   drawPlay(ctx) {
     BG.draw(ctx, this, this.stageIndex);
@@ -531,19 +544,31 @@ class Game {
     drawText(ctx, 'テトリス × ぷよぷよ × 横スクロールシューティング', W / 2, 210, 22, '#fff', 'center', { outline: '#2A1838', outlineWidth: 6 });
     drawText(ctx, 'テトロミノでぷよを打ち抜け！　同じ色をまとめてポップさせて大れんさ！', W / 2, 242, 17, '#FFE3F0', 'center', { outline: '#2A1838', outlineWidth: 5 });
     drawText(ctx, `全 ${STAGES.length} ステージ　武器 ${WEAPONS.length} 種　ボス ${BOSS_DEFS.length} 体`, W / 2, 268, 13, 'rgba(255,255,255,0.8)', 'center', { outline: '#2A1838', outlineWidth: 4 });
+    // 難易度ボタン（タップで選択）
+    const U = TITLE_UI;
+    drawText(ctx, 'なんいど（タップで えらぶ）', W / 2, U.diffY - 27, 13, 'rgba(255,255,255,0.85)', 'center', { outline: '#2A1838', outlineWidth: 4 });
     DIFFS.forEach((d, i) => {
-      const y = 305 + i * 38, sel = i === this.titleCursor;
-      drawText(ctx, (sel ? '▶ ' : '') + d.name + (sel ? ' ◀' : ''), W / 2, y, sel ? 28 : 22, sel ? d.color : 'rgba(255,255,255,0.75)', 'center', { outline: '#2A1838', outlineWidth: 6 });
+      const y = U.diffY + i * U.diffGap, sel = i === this.titleCursor;
+      roundRectPath(ctx, W / 2 - U.diffW / 2, y - U.diffH / 2, U.diffW, U.diffH, 17);
+      ctx.fillStyle = sel ? d.color : 'rgba(255,255,255,0.22)'; ctx.fill();
+      ctx.lineWidth = sel ? 4 : 2; ctx.strokeStyle = sel ? '#fff' : 'rgba(255,255,255,0.6)'; ctx.stroke();
+      if (sel) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(W / 2 - U.diffW / 2 + 20, y, 7, 0, TAU); ctx.fill(); ctx.fillStyle = d.color; ctx.beginPath(); ctx.arc(W / 2 - U.diffW / 2 + 20, y, 3.5, 0, TAU); ctx.fill(); }
+      drawText(ctx, d.name, W / 2, y + 1, sel ? 22 : 19, '#fff', 'center', { outline: sel ? 'rgba(0,0,0,0.35)' : '#2A1838', outlineWidth: sel ? 3 : 5 });
     });
     const desc = ['残機5・敵ゆっくり。はじめての人に。', '残機3。バランスのよい難しさ。', '残機2・敵つよめ。れんさ上級者向け。'][this.titleCursor];
-    drawText(ctx, desc, W / 2, 412, 15, 'rgba(255,255,255,0.85)', 'center', { outline: '#2A1838', outlineWidth: 4 });
-    if (this.reached > 0) {
+    drawText(ctx, desc, W / 2, U.diffY + 3 * U.diffGap - 10, 14, 'rgba(255,255,255,0.9)', 'center', { outline: '#2A1838', outlineWidth: 4 });
+    if (this.reached > 0) { // 開始ステージ（◀ ▶ をタップ）
       const ss = STAGES[this.startStageSel];
-      drawText(ctx, `◀  STAGE ${this.startStageSel + 1} ${ss.name} からスタート  ▶`, W / 2, 434, 15, '#FFE066', 'center', { outline: '#2A1838', outlineWidth: 4 });
+      for (const sgn of [-1, 1]) { ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.arc(W / 2 + sgn * 205, U.stageY, 17, 0, TAU); ctx.fill(); drawText(ctx, sgn < 0 ? '◀' : '▶', W / 2 + sgn * 205, U.stageY + 1, 16, '#fff'); }
+      drawText(ctx, `STAGE ${this.startStageSel + 1} ${ss.name} から`, W / 2, U.stageY, 15, '#FFE066', 'center', { outline: '#2A1838', outlineWidth: 4 });
     }
-    drawText(ctx, 'Z / ENTER / タップ でスタート', W / 2, 455, 24, `rgba(255,255,255,${0.55 + Math.sin(this.time * 5) * 0.45})`, 'center', { outline: '#2A1838', outlineWidth: 6 });
-    drawText(ctx, '移動: ↑↓←→ / WASD　ショット: Z　ボム: X　チャージ: C(長押し)　武器切替: Q / E　ポーズ: P　ミュート: M', W / 2, 500, 14, '#fff', 'center', { outline: '#2A1838', outlineWidth: 4 });
-    drawText(ctx, 'ゲームパッド・タッチ操作にも対応', W / 2, 522, 12, 'rgba(255,255,255,0.75)', 'center', { outline: '#2A1838', outlineWidth: 3 });
+    // スタートボタン
+    const pulse = 0.5 + Math.sin(this.time * 5) * 0.5;
+    roundRectPath(ctx, W / 2 - U.startW / 2, U.startY - U.startH / 2, U.startW, U.startH, 22);
+    ctx.fillStyle = `rgba(255,${120 + pulse * 60},${170 + pulse * 40},0.95)`; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+    drawText(ctx, 'スタート！', W / 2, U.startY + 1, 24, '#fff', 'center', { outline: 'rgba(90,30,70,0.6)', outlineWidth: 4 });
+    drawText(ctx, 'Z / ENTER: スタート　移動: ↑↓←→ / WASD　ショット: Z　ボム: X　チャージ: C(長押し)　武器切替: Q / E　ポーズ: P　ミュート: M', W / 2, 520, 11, '#fff', 'center', { outline: '#2A1838', outlineWidth: 4 });
+    drawText(ctx, 'ゲームパッド・タッチ操作にも対応', W / 2, 533, 10, 'rgba(255,255,255,0.75)', 'center', { outline: '#2A1838', outlineWidth: 3 });
     drawText(ctx, `HI SCORE ${String(this.hi).padStart(8, '0')}`, W - 16, 20, 16, '#FFE066', 'right', { outline: '#2A1838', outlineWidth: 4 });
     if (Sound.isMuted()) drawText(ctx, 'MUTE', 16, 20, 14, '#fff', 'left', { outline: '#2A1838', outlineWidth: 4 });
   }
