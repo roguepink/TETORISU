@@ -118,9 +118,11 @@ class Player {
     }
     this.optionTimer -= dt;
     if (this.options > 0 && Input.down('fire') && !this.entering && this.optionTimer <= 0) {
-      this.optionTimer = w.cooldown(1) * 2.1 * (this.timers.rapid > 0 ? 0.7 : 1) * (g.feverT > 0 ? 0.8 : 1);
-      g.optionFire = true;
-      try { for (const o of this.optPos) w.fire(g, { x: o.x + 4, y: o.y }, lv >= 4 ? 2 : 1); } finally { g.optionFire = false; }
+      // 順番に 1 つずつハート型の誘導ミサイルを撃つ。数が増えるほど弾幕が厚くなる
+      this.optionTimer = (0.42 / this.options) * (this.timers.rapid > 0 ? 0.7 : 1) * (g.feverT > 0 ? 0.8 : 1);
+      this.optionShot = (this.optionShot || 0) + 1;
+      const o = this.optPos[this.optionShot % this.optPos.length];
+      if (o) { fireOptionMissile(g, o.x, o.y, w.rainbow ? rainbowColor(this.t * 3) : '#FF7FAE', lv); Sound.sfx.optionShot(); }
     }
     if (this.missiles) { this.missileTimer -= dt; if (this.missileTimer <= 0 && Input.down('fire')) { this.missileTimer = 0.5; fireMissiles(g, this, w.rainbow ? '#fff' : w.color, lv); } }
     // チャージ

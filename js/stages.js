@@ -1,14 +1,16 @@
 'use strict';
 // ===== ステージ定義・背景・ウェーブ =====
 const STAGES = [
-  { name: 'スカイガーデン', en: 'SKY GARDEN', sub: 'そよ風とぷよの空', duration: 72, scroll: 60, hpMul: 1.0, spawnMul: 1.0, textColor: '#2A5A8A' },
-  { name: 'キャンディオーシャン', en: 'CANDY OCEAN', sub: 'あまあまの海をとびこえて', duration: 84, scroll: 72, hpMul: 1.3, spawnMul: 1.15, textColor: '#8A2A6A' },
-  { name: 'ネオンナイトシティ', en: 'NEON NIGHT CITY', sub: '雨とネオンのはざまで', duration: 94, scroll: 100, hpMul: 1.65, spawnMul: 1.3, textColor: '#FF5EDB' },
-  { name: 'クリスタルケイブ', en: 'CRYSTAL CAVE', sub: 'きらめく洞窟のおくへ', duration: 100, scroll: 55, hpMul: 2.0, spawnMul: 1.45, textColor: '#8EF5E0' },
-  { name: 'テトロディメンション', en: 'TETRO DIMENSION', sub: 'すべてのミノがうまれる場所', duration: 110, scroll: 125, hpMul: 2.4, spawnMul: 1.6, textColor: '#D8B4FF' },
+  { name: 'スカイガーデン', en: 'SKY GARDEN', sub: 'そよ風とぷよの空', bg: 'sky', duration: 70, scroll: 60, hpMul: 1.0, spawnMul: 1.0, boss: 0 },
+  { name: 'キャンディオーシャン', en: 'CANDY OCEAN', sub: 'あまあまの海をとびこえて', bg: 'candy', duration: 80, scroll: 72, hpMul: 1.25, spawnMul: 1.1, boss: 1 },
+  { name: 'サクラ神社', en: 'SAKURA SHRINE', sub: '夕暮れの花びらと鳥居のむこう', bg: 'sakura', duration: 85, scroll: 65, hpMul: 1.5, spawnMul: 1.2, boss: 2 },
+  { name: 'ネオンナイトシティ', en: 'NEON NIGHT CITY', sub: '雨とネオンのはざまで', bg: 'neon', duration: 90, scroll: 100, hpMul: 1.75, spawnMul: 1.3, boss: 3 },
+  { name: 'ボルケーノ', en: 'VOLCANO', sub: '灼熱のマグマがうずまく', bg: 'volcano', duration: 95, scroll: 80, hpMul: 2.0, spawnMul: 1.4, boss: 4 },
+  { name: 'クリスタルケイブ', en: 'CRYSTAL CAVE', sub: 'きらめく洞窟のおくへ', bg: 'crystal', duration: 100, scroll: 55, hpMul: 2.3, spawnMul: 1.5, boss: 5 },
+  { name: 'オーロラ氷原', en: 'AURORA ICEFIELD', sub: '夜空にゆれる光のカーテン', bg: 'aurora', duration: 105, scroll: 70, hpMul: 2.6, spawnMul: 1.6, boss: 6 },
+  { name: 'テトロディメンション', en: 'TETRO DIMENSION', sub: 'すべてのミノがうまれる場所', bg: 'tetro', duration: 115, scroll: 125, hpMul: 3.0, spawnMul: 1.75, boss: 7 },
 ];
 
-// ---- スポーンヘルパー ----
 const SP = {
   line(g, o = {}) {
     const color = o.color !== undefined ? o.color : randInt(0, 4), n = o.n || 5, y = o.y !== undefined ? o.y : rand(95, H - 70), gap = o.gap || 48, phase = rand(TAU);
@@ -64,6 +66,7 @@ const SP = {
     }
     g.spawnEnemy(new Enemy('carrier', W + 40, rand(110, H - 90), { drop: key }));
   },
+  optionCarrier(g) { SP.carrier(g, g.player.options < 4 ? 'option' : 'power'); },
   goodCarrier(g) { SP.carrier(g, pick(['option', 'shield', 'missile', 'rear', 'healBig', 'bomb', 'maxhp', 'power', 'power', 'oneup', 'speed', 'chain', 'chargeup', 'wide'])); },
   mixedCluster(g) { // 2 色が隣り合う大きな塊
     const c1 = randInt(0, 4), c2 = (c1 + randInt(1, 4)) % 5, cx = W + 90, cy = rand(140, H - 140), phase = rand(TAU);
@@ -83,53 +86,58 @@ const SP = {
   rainMinis(g) { const color = randInt(0, 4); for (let i = 0; i < 6; i++) g.spawnEnemy(new Enemy('bouncer', W + 40 + i * 50, 80, { color, dir: 1, speed: 180 })); },
 };
 
-const POOLS = [
-  [ // 1 やさしめ：基本の敵 + 宙返り・ジグザグ・リング
-    { w: 4, gap: 3.4, fn: SP.line }, { w: 4, gap: 3.6, fn: SP.formation }, { w: 2.5, gap: 4, fn: SP.shooter }, { w: 1.5, gap: 4.6, fn: SP.big }, { w: 2, gap: 3.4, fn: SP.colorBurst }, { w: 1.5, gap: 4, fn: SP.spinner }, { w: 1, gap: 3, fn: SP.dasher }, { w: 1.5, gap: 3.5, fn: SP.snake },
-    { w: 1.5, gap: 3.6, fn: SP.loopers }, { w: 1, gap: 3.4, fn: SP.zigzags }, { w: 1.2, gap: 4.2, fn: SP.ringer }, { w: 1, gap: 3.8, fn: SP.wavers },
-  ],
-  [ // 2 跳ねる・壁・狙撃・急降下・背後
-    { w: 3, gap: 3, fn: SP.line }, { w: 3.5, gap: 3.2, fn: SP.formation }, { w: 2, gap: 4, fn: SP.shooter }, { w: 2, gap: 4.4, fn: SP.big }, { w: 2, gap: 3.2, fn: SP.colorBurst }, { w: 2, gap: 3.6, fn: SP.spinner }, { w: 2, gap: 3, fn: SP.bouncers }, { w: 2, gap: 4.5, fn: SP.wall }, { w: 1.5, gap: 3.4, fn: SP.snake }, { w: 1, gap: 3.4, fn: SP.dashers }, { w: 1, gap: 4, fn: SP.ojama }, { w: 1.5, gap: 3.6, fn: SP.mixedCluster },
-    { w: 1.5, gap: 3.6, fn: SP.loopers }, { w: 1.2, gap: 3.4, fn: SP.zigzags }, { w: 1.5, gap: 4, fn: SP.ringer }, { w: 1.5, gap: 4.2, fn: SP.sniper }, { w: 1.5, gap: 3.6, fn: SP.divers }, { w: 1, gap: 3.8, fn: SP.ambushers }, { w: 1, gap: 4, fn: SP.bombers }, { w: 1, gap: 3.8, fn: SP.ricochets }, { w: 0.8, gap: 4.4, fn: SP.minefield }, { w: 1, gap: 3.6, fn: SP.wavers },
-  ],
-  [ // 3 タレット・追尾・渦巻き・爆撃
-    { w: 2.5, gap: 2.8, fn: SP.line }, { w: 3, gap: 3, fn: SP.formation }, { w: 2, gap: 3.4, fn: SP.twoFormations }, { w: 2, gap: 3.8, fn: SP.shooters }, { w: 2, gap: 4, fn: SP.big }, { w: 2, gap: 3, fn: SP.colorBurst }, { w: 2, gap: 3.2, fn: SP.homers }, { w: 2, gap: 4.2, fn: SP.turrets }, { w: 1.5, gap: 4.4, fn: SP.wall }, { w: 2, gap: 3, fn: SP.bouncers }, { w: 1.5, gap: 3.4, fn: SP.dashers }, { w: 1.5, gap: 3.2, fn: SP.spinner }, { w: 1, gap: 3.8, fn: SP.ojama }, { w: 1.5, gap: 3.4, fn: SP.mixedCluster }, { w: 1, gap: 3, fn: SP.rainMinis },
-    { w: 2, gap: 3.4, fn: SP.loopers }, { w: 1.5, gap: 3.2, fn: SP.zigzags }, { w: 1.5, gap: 3.8, fn: SP.ringer }, { w: 2, gap: 4, fn: SP.sniper }, { w: 2, gap: 3.4, fn: SP.divers }, { w: 1.5, gap: 3.6, fn: SP.ambushers }, { w: 1.5, gap: 3.8, fn: SP.bombers }, { w: 1.5, gap: 4.2, fn: SP.spiraler }, { w: 1.5, gap: 3.6, fn: SP.ricochets }, { w: 1, gap: 4.2, fn: SP.minefield }, { w: 1.5, gap: 3.4, fn: SP.wavers },
-  ],
-  [ // 4 二重の壁・大型・おじゃま列、全種類が濃く
-    { w: 2.5, gap: 2.8, fn: SP.line }, { w: 3, gap: 2.9, fn: SP.formation }, { w: 2, gap: 3.4, fn: SP.twoFormations }, { w: 2, gap: 3.6, fn: SP.shooters }, { w: 2, gap: 3.8, fn: SP.twoBig }, { w: 2.5, gap: 3, fn: SP.colorBurst }, { w: 2, gap: 3.2, fn: SP.homers }, { w: 1.5, gap: 4, fn: SP.turrets }, { w: 2, gap: 4.6, fn: SP.doubleWall }, { w: 2, gap: 3.4, fn: SP.bigSpinner }, { w: 2, gap: 3.2, fn: SP.dashers }, { w: 2, gap: 3.6, fn: SP.ojamaLine }, { w: 2, gap: 3.2, fn: SP.mixedCluster }, { w: 1.5, gap: 3, fn: SP.rainMinis }, { w: 1.5, gap: 3, fn: SP.bouncers },
-    { w: 2, gap: 3.2, fn: SP.loopers }, { w: 2, gap: 3, fn: SP.zigzags }, { w: 2, gap: 3.6, fn: SP.ringer }, { w: 2, gap: 3.8, fn: SP.sniper }, { w: 2, gap: 3.2, fn: SP.divers }, { w: 2, gap: 3.4, fn: SP.ambushers }, { w: 2, gap: 3.6, fn: SP.bombers }, { w: 2, gap: 4, fn: SP.spiraler }, { w: 2, gap: 3.4, fn: SP.ricochets }, { w: 1.5, gap: 4, fn: SP.minefield }, { w: 2, gap: 3.2, fn: SP.wavers },
-  ],
-  [ // 5 すべて・高密度
-    { w: 2.5, gap: 2.5, fn: SP.line }, { w: 3, gap: 2.6, fn: SP.formation }, { w: 3, gap: 3, fn: SP.twoFormations }, { w: 2.5, gap: 3.2, fn: SP.shooters }, { w: 2, gap: 3.4, fn: SP.twoBig }, { w: 3, gap: 2.8, fn: SP.colorBurst }, { w: 2, gap: 3, fn: SP.homers }, { w: 2, gap: 3.6, fn: SP.turrets }, { w: 2, gap: 4.2, fn: SP.doubleWall }, { w: 2, gap: 3.2, fn: SP.bigSpinner }, { w: 2.5, gap: 3, fn: SP.dashers }, { w: 2, gap: 3.4, fn: SP.ojamaLine }, { w: 2.5, gap: 3, fn: SP.mixedCluster }, { w: 2, gap: 2.8, fn: SP.rainMinis }, { w: 2, gap: 2.8, fn: SP.bouncers }, { w: 1.5, gap: 3, fn: SP.snake },
-    { w: 2.5, gap: 3, fn: SP.loopers }, { w: 2, gap: 2.8, fn: SP.zigzags }, { w: 2, gap: 3.4, fn: SP.ringer }, { w: 2.5, gap: 3.4, fn: SP.sniper }, { w: 2.5, gap: 3, fn: SP.divers }, { w: 2, gap: 3.2, fn: SP.ambushers }, { w: 2, gap: 3.2, fn: SP.bombers }, { w: 2.5, gap: 3.6, fn: SP.spiraler }, { w: 2, gap: 3.2, fn: SP.ricochets }, { w: 2, gap: 3.6, fn: SP.minefield }, { w: 2, gap: 3, fn: SP.wavers },
-  ],
+
+// ---- 出現パターン（min: 登場する最初のステージ番号） ----
+const PATTERNS = [
+  { k: 'line', min: 0, w: 4, gap: 3.4, fn: SP.line }, { k: 'formation', min: 0, w: 4, gap: 3.5, fn: SP.formation }, { k: 'shooter', min: 0, w: 2.5, gap: 4, fn: SP.shooter },
+  { k: 'big', min: 0, w: 1.5, gap: 4.6, fn: SP.big }, { k: 'colorBurst', min: 0, w: 2, gap: 3.4, fn: SP.colorBurst }, { k: 'spinner', min: 0, w: 1.5, gap: 4, fn: SP.spinner },
+  { k: 'dasher', min: 0, w: 1, gap: 3, fn: SP.dasher }, { k: 'snake', min: 0, w: 1.5, gap: 3.5, fn: SP.snake }, { k: 'loopers', min: 0, w: 1.5, gap: 3.6, fn: SP.loopers },
+  { k: 'zigzags', min: 0, w: 1, gap: 3.4, fn: SP.zigzags }, { k: 'ringer', min: 0, w: 1.2, gap: 4.2, fn: SP.ringer }, { k: 'wavers', min: 0, w: 1, gap: 3.8, fn: SP.wavers },
+  { k: 'bouncers', min: 1, w: 2, gap: 3, fn: SP.bouncers }, { k: 'wall', min: 1, w: 2, gap: 4.5, fn: SP.wall }, { k: 'dashers', min: 1, w: 1, gap: 3.4, fn: SP.dashers },
+  { k: 'ojama', min: 1, w: 1, gap: 4, fn: SP.ojama }, { k: 'mixedCluster', min: 1, w: 1.5, gap: 3.6, fn: SP.mixedCluster }, { k: 'sniper', min: 1, w: 1.5, gap: 4.2, fn: SP.sniper },
+  { k: 'divers', min: 1, w: 1.5, gap: 3.6, fn: SP.divers }, { k: 'ambushers', min: 1, w: 1, gap: 3.8, fn: SP.ambushers }, { k: 'bombers', min: 1, w: 1, gap: 4, fn: SP.bombers },
+  { k: 'ricochets', min: 1, w: 1, gap: 3.8, fn: SP.ricochets }, { k: 'minefield', min: 1, w: 0.8, gap: 4.4, fn: SP.minefield },
+  { k: 'twoFormations', min: 2, w: 2, gap: 3.4, fn: SP.twoFormations }, { k: 'shooters', min: 2, w: 2, gap: 3.8, fn: SP.shooters }, { k: 'homers', min: 2, w: 2, gap: 3.2, fn: SP.homers },
+  { k: 'turrets', min: 2, w: 2, gap: 4.2, fn: SP.turrets }, { k: 'spiraler', min: 2, w: 1.5, gap: 4.2, fn: SP.spiraler }, { k: 'rainMinis', min: 2, w: 1, gap: 3, fn: SP.rainMinis },
+  { k: 'twoBig', min: 3, w: 2, gap: 3.8, fn: SP.twoBig }, { k: 'doubleWall', min: 3, w: 2, gap: 4.6, fn: SP.doubleWall }, { k: 'bigSpinner', min: 3, w: 2, gap: 3.4, fn: SP.bigSpinner },
+  { k: 'ojamaLine', min: 3, w: 2, gap: 3.6, fn: SP.ojamaLine },
 ];
+// ステージごとの味付け（そのステージらしい敵を増やす）
+const FLAVOR = [
+  {}, { bouncers: 1.6, divers: 1.4 }, { loopers: 2, divers: 1.6, wavers: 1.5 }, { turrets: 1.6, sniper: 1.6, homers: 1.4 },
+  { bombers: 2, minefield: 1.8, dashers: 1.4 }, { ojamaLine: 1.5, doubleWall: 1.4, spiraler: 1.5 }, { ricochets: 2, wavers: 1.8, spiraler: 1.4 }, { twoFormations: 1.4, bigSpinner: 1.3 },
+];
+function buildPool(si) {
+  const fl = FLAVOR[si] || {};
+  return PATTERNS.filter((p) => p.min <= si).map((p) => ({ fn: p.fn, gap: p.gap, w: p.w * (fl[p.k] || 1) * (si - p.min >= 2 ? 1.15 : 1) }));
+}
 
 function generateWaves(si) {
-  const st = STAGES[si], rng = mulberry32(1234 + si * 977), waves = [];
-  let t = 2;
-  const pool = POOLS[si];
+  const st = STAGES[si], rng = mulberry32(1234 + si * 977), waves = [], pool = buildPool(si);
+  let t = 2.5;
   while (t < st.duration - 5) {
     const pat = weightedPick(pool, rng);
     waves.push({ t, fn: pat.fn });
-    t += (pat.gap / st.spawnMul) * (0.85 + rng() * 0.3);
+    const progress = t / st.duration; // 序盤はゆるく、終盤に向けて密度アップ
+    t += (pat.gap * (1.3 - 0.55 * progress) / st.spawnMul) * (0.85 + rng() * 0.3);
   }
-  for (let ct = 9; ct < st.duration - 8; ct += 24) waves.push({ t: ct, fn: (g) => SP.carrier(g) });
-  for (let ct = 20; ct < st.duration - 8; ct += 34) waves.push({ t: ct, fn: SP.goodCarrier });
-  for (let ct = 30; ct < st.duration - 8; ct += 40) waves.push({ t: ct, fn: SP.rainbow });
-  if (si >= 1) for (let ct = 30; ct < st.duration - 8; ct += 31) waves.push({ t: ct, fn: SP.ojama });
+  for (let ct = 10; ct < st.duration - 8; ct += 36) waves.push({ t: ct, fn: (g) => SP.carrier(g) });
+  for (let ct = 14; ct < st.duration - 8; ct += 34) waves.push({ t: ct, fn: SP.optionCarrier });
+  for (let ct = 26; ct < st.duration - 8; ct += 55) waves.push({ t: ct, fn: SP.goodCarrier });
+  for (let ct = 40; ct < st.duration - 8; ct += 60) waves.push({ t: ct, fn: SP.rainbow });
+  if (si >= 1) for (let ct = 30; ct < st.duration - 8; ct += 33) waves.push({ t: ct, fn: SP.ojama });
   waves.sort((a, b) => a.t - b.t);
   return waves;
 }
 
-// ---- 背景 ----
 const BG = (() => {
   const cache = {};
   function wrap(x, period, margin) { return ((x % period) + period) % period - margin; }
-  function init(si) {
-    if (cache[si]) return cache[si];
-    const rng = mulberry32(99 + si * 13), c = { si };
+  const KEYS = ['sky', 'candy', 'neon', 'crystal', 'tetro', 'sakura', 'volcano', 'aurora'];
+  function init(key) {
+    if (cache[key]) return cache[key];
+    const si = KEYS.indexOf(key);
+    const rng = mulberry32(99 + si * 13), c = { key };
     const R = (a, b) => a + rng() * (b - a);
     if (si === 0) {
       c.farClouds = Array.from({ length: 9 }, () => ({ x: R(0, 1400), y: R(60, 300), s: R(0.6, 1.3) }));
@@ -151,19 +159,39 @@ const BG = (() => {
       c.stalTop = Array.from({ length: 40 }, (_, i) => ({ x: i * 40, h: R(20, 90) }));
       c.stalBot = Array.from({ length: 40 }, (_, i) => ({ x: i * 40, h: R(20, 80) }));
       c.dust = Array.from({ length: 60 }, () => ({ x: R(0, 1200), y: R(0, H), s: R(1, 3), ph: R(0, TAU) }));
+    } else if (si === 5) { // サクラ神社
+      c.ridgeA = Array.from({ length: 12 }, (_, i) => ({ x: i * 180, h: R(60, 140) }));
+      c.ridgeB = Array.from({ length: 10 }, (_, i) => ({ x: i * 220, h: R(90, 190) }));
+      c.torii = Array.from({ length: 4 }, (_, i) => ({ x: i * 520 + R(0, 120), h: R(150, 210), w: R(110, 150) }));
+      c.trees = Array.from({ length: 7 }, (_, i) => ({ x: i * 260 + R(0, 80), h: R(70, 120), s: R(0.8, 1.3) }));
+      c.lanterns = Array.from({ length: 12 }, (_, i) => ({ x: i * 130 + R(-20, 20), y: R(70, 120), ph: R(0, TAU) }));
+      c.stone = Array.from({ length: 6 }, (_, i) => ({ x: i * 330 + R(0, 100), s: R(0.7, 1.1) }));
+      c.petals = Array.from({ length: 60 }, () => ({ x: R(0, 1300), y: R(0, H), s: R(3, 7), ph: R(0, TAU), sp: R(20, 45) }));
+    } else if (si === 6) { // ボルケーノ
+      c.smoke = Array.from({ length: 10 }, () => ({ x: R(0, 1600), y: R(40, 220), s: R(1, 2.2), a: R(0.25, 0.5) }));
+      c.volcanos = Array.from({ length: 4 }, (_, i) => ({ x: i * 450 + R(0, 100), w: R(220, 340), h: R(180, 260) }));
+      c.pillars = Array.from({ length: 8 }, (_, i) => ({ x: i * 240 + R(0, 80), w: R(28, 60), h: R(80, 220) }));
+      c.embers = Array.from({ length: 70 }, () => ({ x: R(0, 1200), y: R(0, H), s: R(1.5, 4), ph: R(0, TAU), sp: R(40, 110) }));
+      c.bubbles = Array.from({ length: 14 }, () => ({ x: R(0, 1200), ph: R(0, TAU), s: R(6, 16) }));
+    } else if (si === 7) { // オーロラ氷原
+      c.stars = Array.from({ length: 90 }, () => ({ x: R(0, 1400), y: R(0, 330), s: R(0.5, 1.8), ph: R(0, TAU) }));
+      c.bergs = Array.from({ length: 6 }, (_, i) => ({ x: i * 330 + R(0, 100), w: R(140, 260), h: R(70, 150) }));
+      c.floes = Array.from({ length: 9 }, (_, i) => ({ x: i * 220 + R(0, 60), w: R(90, 200), h: R(18, 30), ph: R(0, TAU) }));
+      c.snow = Array.from({ length: 90 }, () => ({ x: R(0, 1300), y: R(0, H), s: R(1.5, 4), ph: R(0, TAU), sp: R(25, 60) }));
+      c.pines = Array.from({ length: 10 }, (_, i) => ({ x: i * 200 + R(0, 80), h: R(40, 90) }));
     } else {
       c.stars = [0.1, 0.3, 0.6].map((f, li) => ({ f, pts: Array.from({ length: 70 - li * 15 }, () => ({ x: R(0, 1400), y: R(0, H), s: R(0.5, 1.5 + li), ph: R(0, TAU) })) }));
       c.nebula = Array.from({ length: 6 }, () => ({ x: R(0, 1600), y: R(50, 450), s: R(120, 260), col: pick(['rgba(160,80,255,', 'rgba(255,90,200,', 'rgba(80,200,255,']) }));
       c.minos = Array.from({ length: 11 }, () => ({ x: R(0, 1400), y: R(-200, H), s: R(26, 50), k: pick(TETROMINO_KEYS), rot: R(0, TAU), vr: R(-0.4, 0.4), vy: R(20, 50) }));
     }
-    cache[si] = c; return c;
+    cache[key] = c; return c;
   }
   function cloud(ctx, x, y, s, alpha) {
     ctx.fillStyle = `rgba(255,255,255,${alpha})`; ctx.beginPath();
     ctx.arc(x, y, 26 * s, 0, TAU); ctx.arc(x + 28 * s, y - 10 * s, 32 * s, 0, TAU); ctx.arc(x + 62 * s, y, 24 * s, 0, TAU); ctx.arc(x + 30 * s, y + 10 * s, 28 * s, 0, TAU); ctx.fill();
   }
-  function draw(ctx, g, si) {
-    const c = init(si), sc = g.scroll, t = g.time;
+  function draw(ctx, g, stageIndex) {
+    const key = STAGES[stageIndex].bg, c = init(key), sc = g.scroll, t = g.time, si = KEYS.indexOf(key);
     if (si === 0) {
       const gr = ctx.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#7CC9FF'); gr.addColorStop(0.6, '#BFE6FF'); gr.addColorStop(1, '#F2FAFF'); ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
       const sg = ctx.createRadialGradient(830, 90, 10, 830, 90, 160); sg.addColorStop(0, 'rgba(255,250,200,1)'); sg.addColorStop(0.25, 'rgba(255,240,170,0.9)'); sg.addColorStop(1, 'rgba(255,240,170,0)'); ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(830, 90, 160, 0, TAU); ctx.fill();
@@ -227,6 +255,66 @@ const BG = (() => {
       ctx.beginPath(); ctx.moveTo(-50, H); for (const s of c.stalBot) { const x = wrap(s.x - sc * 0.6 + 20, 1600, 100); ctx.lineTo(x, H); ctx.lineTo(x + 20, H - s.h); } ctx.lineTo(W + 50, H); ctx.fill();
       for (const d of c.dust) { const x = wrap(d.x - sc * 0.9, 1200, 30), y = d.y + Math.sin(t * 0.8 + d.ph) * 15; ctx.fillStyle = `rgba(180,255,240,${0.3 + Math.sin(t * 3 + d.ph) * 0.3})`; ctx.beginPath(); ctx.arc(x, y, d.s, 0, TAU); ctx.fill(); }
       const fg = ctx.createLinearGradient(0, 300, 0, H); fg.addColorStop(0, 'rgba(120,220,210,0)'); fg.addColorStop(1, 'rgba(120,220,210,0.18)'); ctx.fillStyle = fg; ctx.fillRect(0, 300, W, H - 300);
+    } else if (si === 5) { // ---- サクラ神社：夕暮れ ----
+      const gr = ctx.createLinearGradient(0, 0, 0, 400); gr.addColorStop(0, '#5B3A9C'); gr.addColorStop(0.5, '#E8789A'); gr.addColorStop(1, '#FFD39A'); ctx.fillStyle = gr; ctx.fillRect(0, 0, W, 400);
+      const sg = ctx.createRadialGradient(760, 350, 10, 760, 350, 140); sg.addColorStop(0, 'rgba(255,200,120,1)'); sg.addColorStop(0.3, 'rgba(255,150,90,0.8)'); sg.addColorStop(1, 'rgba(255,150,90,0)'); ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(760, 350, 140, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#7A4F9E'; ctx.beginPath(); ctx.moveTo(-50, 400); for (const r of c.ridgeB) { const x = wrap(r.x - sc * 0.12, 2200, 300); ctx.lineTo(x, 400 - r.h); ctx.lineTo(x + 110, 400 - r.h * 0.6); } ctx.lineTo(W + 50, 400); ctx.fill();
+      ctx.fillStyle = '#5A3A80'; ctx.beginPath(); ctx.moveTo(-50, 400); for (const r of c.ridgeA) { const x = wrap(r.x - sc * 0.2, 2160, 300); ctx.lineTo(x, 400 - r.h); ctx.lineTo(x + 90, 400 - r.h * 0.5); } ctx.lineTo(W + 50, 400); ctx.fill();
+      const gg = ctx.createLinearGradient(0, 395, 0, H); gg.addColorStop(0, '#5E8F4E'); gg.addColorStop(1, '#2E5A2E'); ctx.fillStyle = gg; ctx.fillRect(0, 395, W, H - 395);
+      ctx.fillStyle = '#C9B9A2'; roundRectPath(ctx, -10, 452, W + 20, 46, 0); ctx.fill(); ctx.fillStyle = 'rgba(0,0,0,0.08)'; for (let i = 0; i < 14; i++) { const x = wrap(i * 80 - sc * 0.9, 1120, 80); roundRectPath(ctx, x, 456, 60, 38, 10); ctx.fill(); }
+      for (const tr of c.trees) { // 桜の木
+        const x = wrap(tr.x - sc * 0.45, 1820, 150), y = 400;
+        ctx.fillStyle = '#5A3A2A'; ctx.fillRect(x - 6, y - tr.h, 12, tr.h);
+        for (const [dx, dy, r] of [[0, -tr.h - 10, 46], [-36, -tr.h + 10, 34], [38, -tr.h + 6, 36], [-10, -tr.h - 40, 32], [20, -tr.h - 34, 30]]) { ctx.fillStyle = r % 2 ? '#FFB7D5' : '#FF9FC6'; ctx.beginPath(); ctx.arc(x + dx * tr.s, y + dy * tr.s, r * tr.s, 0, TAU); ctx.fill(); }
+        ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.arc(x - 12 * tr.s, y - (tr.h + 30) * tr.s, 18 * tr.s, 0, TAU); ctx.fill();
+      }
+      for (const st of c.stone) { const x = wrap(st.x - sc * 0.6, 1980, 100), s = st.s; ctx.fillStyle = '#8C8C8C'; ctx.fillRect(x - 6 * s, 420 - 46 * s, 12 * s, 46 * s); ctx.fillRect(x - 16 * s, 420 - 4, 32 * s, 6); ctx.fillStyle = '#6E6E6E'; ctx.beginPath(); ctx.moveTo(x - 20 * s, 420 - 46 * s); ctx.lineTo(x, 420 - 66 * s); ctx.lineTo(x + 20 * s, 420 - 46 * s); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#FFE08A'; ctx.fillRect(x - 5 * s, 420 - 40 * s, 10 * s, 10 * s); }
+      for (const tg of c.torii) { // 鳥居
+        const x = wrap(tg.x - sc * 0.6, 2080, 200), h = tg.h, w = tg.w, y = 455;
+        ctx.fillStyle = '#D9381E'; ctx.fillRect(x - w / 2, y - h, 12, h); ctx.fillRect(x + w / 2 - 12, y - h, 12, h);
+        ctx.fillRect(x - w / 2 - 12, y - h + 32, w + 24, 10);
+        ctx.fillStyle = '#2A1A1A'; ctx.beginPath(); ctx.moveTo(x - w / 2 - 26, y - h); ctx.lineTo(x + w / 2 + 26, y - h); ctx.lineTo(x + w / 2 + 20, y - h + 14); ctx.lineTo(x - w / 2 - 20, y - h + 14); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#D9381E'; ctx.fillRect(x - 6, y - h + 14, 12, 20);
+      }
+      ctx.strokeStyle = 'rgba(60,30,30,0.6)'; ctx.lineWidth = 2; ctx.beginPath(); for (let x = -20; x <= W + 20; x += 20) ctx.lineTo(x, 60 + Math.sin((x + sc * 0.8) * 0.012) * 14); ctx.stroke();
+      for (const l of c.lanterns) { const x = wrap(l.x - sc * 0.8, 1560, 60), y = 60 + Math.sin((x + sc * 0.8) * 0.012) * 14 + 16 + Math.sin(t * 2 + l.ph) * 3; ctx.save(); ctx.shadowColor = '#FF8A4D'; ctx.shadowBlur = 18; ctx.fillStyle = '#FF5E3A'; roundRectPath(ctx, x - 9, y - 12, 18, 26, 7); ctx.fill(); ctx.restore(); ctx.fillStyle = '#FFD27A'; ctx.fillRect(x - 5, y - 4, 10, 10); ctx.fillStyle = '#2A1A1A'; ctx.fillRect(x - 6, y - 15, 12, 3); ctx.fillRect(x - 6, y + 12, 12, 3); }
+      for (const p of c.petals) { const x = wrap(p.x - sc * 1.2 - t * 40, 1300, 50), y = (p.y + Math.sin(t * 1.5 + p.ph) * 18 + t * p.sp) % H; ctx.save(); ctx.translate(x, y); ctx.rotate(t * 3 + p.ph); ctx.fillStyle = Math.sin(p.ph) > 0 ? '#FFC2DA' : '#FF9FC6'; ctx.beginPath(); ctx.ellipse(0, 0, p.s, p.s * 0.55, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+    } else if (si === 6) { // ---- ボルケーノ ----
+      const gr = ctx.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#12040A'); gr.addColorStop(0.55, '#3A0C10'); gr.addColorStop(0.85, '#8A2A10'); ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+      for (const s of c.smoke) { const x = wrap(s.x - sc * 0.2 - t * 12, 1800, 200); ctx.fillStyle = `rgba(60,40,45,${s.a})`; ctx.beginPath(); ctx.ellipse(x, s.y + Math.sin(t * 0.7 + s.x) * 6, 90 * s.s, 34 * s.s, 0, 0, TAU); ctx.fill(); }
+      for (const v of c.volcanos) { // 遠景の火山と噴煙
+        const x = wrap(v.x - sc * 0.25, 1900, 300);
+        ctx.fillStyle = '#2A0E10'; ctx.beginPath(); ctx.moveTo(x - v.w / 2, 460); ctx.lineTo(x - 22, 460 - v.h); ctx.lineTo(x + 22, 460 - v.h); ctx.lineTo(x + v.w / 2, 460); ctx.closePath(); ctx.fill();
+        ctx.save(); ctx.shadowColor = '#FF7A1A'; ctx.shadowBlur = 25; ctx.fillStyle = '#FF9A2A'; ctx.fillRect(x - 18, 460 - v.h - 3, 36, 6); ctx.restore();
+        ctx.strokeStyle = 'rgba(255,140,40,0.8)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 10, 460 - v.h); ctx.quadraticCurveTo(x + 40, 460 - v.h * 0.5, x + v.w * 0.3, 460); ctx.stroke();
+        ctx.fillStyle = 'rgba(80,60,60,0.5)'; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(x + Math.sin(t * 0.8 + i) * 14, 460 - v.h - 20 - i * 26, 16 + i * 6, 0, TAU); ctx.fill(); }
+      }
+      for (const p of c.pillars) { const x = wrap(p.x - sc * 0.5, 1920, 100); ctx.fillStyle = '#1C0C0E'; ctx.fillRect(x, 470 - p.h, p.w, p.h); ctx.fillStyle = 'rgba(255,120,40,0.35)'; ctx.fillRect(x, 470 - p.h, 4, p.h); }
+      // 溶岩の川
+      const lg = ctx.createLinearGradient(0, 455, 0, H); lg.addColorStop(0, '#FFD23A'); lg.addColorStop(0.3, '#FF7A1A'); lg.addColorStop(1, '#B3260A'); ctx.save(); ctx.shadowColor = '#FF6A00'; ctx.shadowBlur = 30; ctx.fillStyle = lg; ctx.fillRect(0, 458, W, H - 458); ctx.restore();
+      ctx.strokeStyle = 'rgba(255,240,150,0.6)'; ctx.lineWidth = 2; for (let row = 0; row < 3; row++) { ctx.beginPath(); for (let x = -20; x <= W + 20; x += 16) ctx.lineTo(x, 470 + row * 22 + Math.sin((x + sc * 1.3) * 0.04 + t * 1.5 + row) * 4); ctx.stroke(); }
+      for (const b of c.bubbles) { const k = (t * 0.6 + b.ph) % 1, x = wrap(b.x - sc * 1.3, 1200, 50); if (k < 0.7) { ctx.fillStyle = 'rgba(255,230,120,0.9)'; ctx.beginPath(); ctx.arc(x, 500, b.s * k, 0, TAU); ctx.fill(); } else { ctx.strokeStyle = 'rgba(255,240,180,0.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, 500, b.s * (0.7 + (k - 0.7) * 3), 0, TAU); ctx.stroke(); } }
+      for (const e of c.embers) { const x = wrap(e.x - sc * 1.1 + Math.sin(t * 2 + e.ph) * 10, 1200, 30), y = ((e.y - t * e.sp) % (H + 40) + H + 40) % (H + 40) - 20, a = 0.5 + Math.sin(t * 8 + e.ph) * 0.4; ctx.fillStyle = `rgba(255,${160 + Math.floor(a * 80)},60,${a})`; ctx.beginPath(); ctx.arc(x, y, e.s, 0, TAU); ctx.fill(); }
+    } else if (si === 7) { // ---- オーロラ氷原 ----
+      const gr = ctx.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#040A24'); gr.addColorStop(0.7, '#0B2A4A'); gr.addColorStop(1, '#0A1E38'); ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#fff'; for (const s of c.stars) { const x = wrap(s.x - sc * 0.08, 1400, 20); ctx.globalAlpha = 0.4 + Math.sin(t * 2 + s.ph) * 0.35; ctx.fillRect(x, s.y, s.s, s.s); } ctx.globalAlpha = 1;
+      // オーロラ（3 本のカーテン）
+      for (let band = 0; band < 3; band++) {
+        const col = ['rgba(90,255,180,', 'rgba(120,200,255,', 'rgba(200,120,255,'][band];
+        for (let x = 0; x < W; x += 10) {
+          const ph = x * 0.008 + t * (0.5 + band * 0.2) + band * 2 + sc * 0.002;
+          const top = 60 + band * 40 + Math.sin(ph) * 40 + Math.sin(ph * 2.3) * 14, hgt = 90 + Math.sin(ph * 1.7 + 1) * 40;
+          const ag = ctx.createLinearGradient(0, top, 0, top + hgt); ag.addColorStop(0, col + '0)'); ag.addColorStop(0.3, col + (0.28 - band * 0.05) + ')'); ag.addColorStop(1, col + '0)');
+          ctx.fillStyle = ag; ctx.fillRect(x, top, 10, hgt);
+        }
+      }
+      ctx.fillStyle = '#F2F7FF'; ctx.beginPath(); ctx.arc(150, 90, 34, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(200,215,235,0.5)'; ctx.beginPath(); ctx.arc(138, 82, 7, 0, TAU); ctx.arc(160, 100, 5, 0, TAU); ctx.fill();
+      for (const b of c.bergs) { const x = wrap(b.x - sc * 0.3, 1980, 300); ctx.fillStyle = '#9FC4E8'; ctx.beginPath(); ctx.moveTo(x - b.w / 2, 440); ctx.lineTo(x - b.w * 0.2, 440 - b.h); ctx.lineTo(x + b.w * 0.15, 440 - b.h * 0.7); ctx.lineTo(x + b.w / 2, 440); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#D6EAFF'; ctx.beginPath(); ctx.moveTo(x - b.w * 0.2, 440 - b.h); ctx.lineTo(x + b.w * 0.15, 440 - b.h * 0.7); ctx.lineTo(x - b.w * 0.05, 440); ctx.lineTo(x - b.w * 0.4, 440); ctx.closePath(); ctx.fill(); }
+      for (const p of c.pines) { const x = wrap(p.x - sc * 0.45, 2000, 100); ctx.fillStyle = '#0E3A3A'; ctx.beginPath(); ctx.moveTo(x - 16, 440); ctx.lineTo(x, 440 - p.h); ctx.lineTo(x + 16, 440); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#E8F4FF'; ctx.beginPath(); ctx.moveTo(x - 7, 440 - p.h * 0.55); ctx.lineTo(x, 440 - p.h); ctx.lineTo(x + 7, 440 - p.h * 0.55); ctx.closePath(); ctx.fill(); }
+      const wg = ctx.createLinearGradient(0, 438, 0, H); wg.addColorStop(0, '#13406A'); wg.addColorStop(1, '#061830'); ctx.fillStyle = wg; ctx.fillRect(0, 438, W, H - 438);
+      ctx.fillStyle = 'rgba(120,255,200,0.12)'; for (let i = 0; i < 6; i++) ctx.fillRect(0, 450 + i * 16 + Math.sin(t + i) * 3, W, 3);
+      for (const f of c.floes) { const x = wrap(f.x - sc * 0.75, 1980, 220), y = 452 + Math.sin(t * 1.2 + f.ph) * 4; ctx.fillStyle = '#EAF5FF'; roundRectPath(ctx, x, y, f.w, f.h, 10); ctx.fill(); ctx.fillStyle = '#B9D8F2'; roundRectPath(ctx, x, y + f.h - 8, f.w, 8, 6); ctx.fill(); ctx.fillStyle = 'rgba(234,245,255,0.25)'; roundRectPath(ctx, x, y + f.h + 2, f.w, f.h * 0.8, 10); ctx.fill(); }
+      for (const s of c.snow) { const x = wrap(s.x - sc * 0.9 + Math.sin(t * 1.3 + s.ph) * 20, 1300, 30), y = (s.y + t * s.sp) % (H + 20) - 10; ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(x, y, s.s, 0, TAU); ctx.fill(); }
     } else {
       const gr = ctx.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#02000A'); gr.addColorStop(1, '#140A2E'); ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
       for (const n of c.nebula) { const x = wrap(n.x - sc * 0.12, 1700, 300); const ng = ctx.createRadialGradient(x, n.y, 0, x, n.y, n.s); ng.addColorStop(0, n.col + '0.28)'); ng.addColorStop(1, n.col + '0)'); ctx.fillStyle = ng; ctx.beginPath(); ctx.arc(x, n.y, n.s, 0, TAU); ctx.fill(); }

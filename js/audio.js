@@ -69,6 +69,7 @@ const Sound = (() => {
       noise({ filter: 'bandpass', freq: 1800 + chain * 150, freqEnd: 3500, q: 2, dur: 0.08, vol: 0.12 });
       if (chain >= 2) tone({ type: 'triangle', freq: f * 1.5, freqEnd: f * 3, dur: 0.16, vol: 0.12, delay: 0.03 });
     },
+    optionShot() { const t = performance.now(); if (t - lastShoot < 40) return; tone({ type: 'sine', freq: 1200, freqEnd: 700, dur: 0.06, vol: 0.04 }); },
     hit() { tone({ type: 'square', freq: 220, freqEnd: 180, dur: 0.03, vol: 0.03 }); },
     explode(size = 1) {
       noise({ freq: 900 * size, freqEnd: 80, dur: 0.35 + 0.2 * size, vol: 0.3 });
@@ -118,6 +119,9 @@ const Sound = (() => {
       { bpm: 144, root: 57, scale: MINOR, lead: 'sawtooth', bass: 'square', seed: 37, drums: true, chords: [0, 5, 2, 4], arp: true },
       { bpm: 112, root: 55, scale: DORIAN, lead: 'sine', bass: 'triangle', seed: 41, drums: true, chords: [0, 2, 3, 6], arp: false },
       { bpm: 156, root: 52, scale: PHRYG, lead: 'square', bass: 'sawtooth', seed: 59, drums: true, chords: [0, 1, 0, 4], arp: true },
+      { bpm: 118, root: 64, scale: [0, 2, 4, 7, 9], lead: 'triangle', bass: 'triangle', seed: 71, drums: true, chords: [0, 4, 5, 3], arp: true },
+      { bpm: 148, root: 55, scale: MINOR, lead: 'sawtooth', bass: 'square', seed: 83, drums: true, chords: [0, 3, 5, 4], arp: false },
+      { bpm: 108, root: 67, scale: MAJOR, lead: 'sine', bass: 'triangle', seed: 97, drums: true, chords: [0, 5, 3, 4], arp: true },
     ],
     boss: [
       { bpm: 150, root: 57, scale: MINOR, lead: 'square', bass: 'sawtooth', seed: 101, drums: true, chords: [0, 0, 5, 4], arp: true },
@@ -125,6 +129,9 @@ const Sound = (() => {
       { bpm: 160, root: 52, scale: PHRYG, lead: 'square', bass: 'sawtooth', seed: 107, drums: true, chords: [0, 1, 0, 1], arp: true },
       { bpm: 140, root: 50, scale: MINOR, lead: 'sawtooth', bass: 'triangle', seed: 109, drums: true, chords: [0, 5, 3, 4], arp: true },
       { bpm: 172, root: 48, scale: PHRYG, lead: 'sawtooth', bass: 'square', seed: 113, drums: true, chords: [0, 1, 5, 4], arp: true },
+      { bpm: 152, root: 59, scale: MINOR, lead: 'square', bass: 'sawtooth', seed: 127, drums: true, chords: [0, 5, 3, 4], arp: true },
+      { bpm: 164, root: 50, scale: PHRYG, lead: 'sawtooth', bass: 'square', seed: 131, drums: true, chords: [0, 1, 0, 5], arp: true },
+      { bpm: 144, root: 62, scale: MINOR, lead: 'square', bass: 'triangle', seed: 137, drums: true, chords: [0, 3, 6, 4], arp: true },
     ],
   };
   const bgm = { song: null, pattern: null, step: 0, nextTime: 0, timer: null, key: '' };
@@ -205,8 +212,8 @@ const Sound = (() => {
     stop();
     let song = null;
     if (key === 'title') song = SONGS.title;
-    else if (key.startsWith('stage')) song = SONGS.stage[parseInt(key.slice(5)) % 5];
-    else if (key.startsWith('boss')) song = SONGS.boss[parseInt(key.slice(4)) % 5];
+    else if (key.startsWith('stage')) song = SONGS.stage[parseInt(key.slice(5)) % SONGS.stage.length];
+    else if (key.startsWith('boss')) song = SONGS.boss[parseInt(key.slice(4)) % SONGS.boss.length];
     if (!song) return;
     bgm.song = song; bgm.pattern = buildPattern(song); bgm.step = 0; bgm.key = key;
     bgm.nextTime = ctx.currentTime + 0.05;
