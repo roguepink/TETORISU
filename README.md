@@ -5,15 +5,16 @@
 かわいい飛行機に乗って、テトロミノ型の武器でぷよ型の敵を打ち抜く爽快アクション STG です。
 同じ色のぷよをまとめてポップさせると **れんさ** が起こり、スコアもフィーバーゲージもぐんぐん伸びます。
 
-ライブラリ不使用・HTML5 Canvas 製。`index.html` をブラウザで開くだけで遊べます。
+インストールは不要です。`index.html` は1ファイルで完結しているので、ブラウザで開くだけで遊べます(PC・スマホどちらも対応)。
 
 ## あそびかた
 
-```
+```sh
 git clone <このリポジトリ>
 cd TETORISU
 # そのまま index.html をダブルクリック、または
-npx serve .      # http://localhost:3000
+python3 -m http.server 8000
+# → http://localhost:8000/ を開く
 ```
 
 ### 操作
@@ -93,21 +94,45 @@ npx serve .      # http://localhost:3000
 
 ボスも 1 体あたり 13〜24 種類の攻撃パターン（渦巻き、交差スパイラル、動く弾幕カーテン、跳弾、放物線弾、針の列、機雷ばらまき など）をランダムに繰り出します。
 
-## ファイル構成
+## 人に送る・スマホのアプリにする
+
+- **GitHub Pages で公開**: リポジトリの Settings → Pages → Branch を `main` / root にすると、`https://roguepink.github.io/TETORISU/` で遊べます。
+  URL を LINE などで送れば そのまま遊べます。ホーム画面に追加すると アプリのように全画面・横向きで遊べ、オフラインでも起動します(`manifest.webmanifest`・`sw.js`・`icons/`)。
+  - iPhone: Safari で開く → 共有 → 「ホーム画面に追加」
+  - Android: Chrome で開く → メニュー → 「アプリをインストール」/「ホーム画面に追加」
+- **ファイルで送る**: `index.html` 1枚だけで動くので、このファイルを送れば相手はダブルクリックで遊べます。
+- 画面の「⛶ 全画面」ボタン(PC は F キー)で全画面になります。スマホは横向きがおすすめです。
+
+## つくり
+
+画像・音声ファイルや外部ライブラリは使っていません。絵はすべて Canvas のパスで描き、効果音と BGM は WebAudio で合成しています。
+`.claude/skills/web-game-forge/` のスキルの手順(企画 → 構成 → 実装 → ブラウザで検証)で作っています。
 
 ```
-index.html
-css/style.css
-js/util.js       共通ユーティリティ・テトロミノ描画
-js/audio.js      効果音と BGM（WebAudio で合成）
-js/input.js      キーボード / ゲームパッド / タッチ
-js/particles.js  パーティクル・エフェクト
-js/weapons.js    武器・自機の弾
-js/items.js      アイテム
-js/enemies.js    ぷよ型の敵
-js/bosses.js     ボス
-js/stages.js     ステージ・背景・ウェーブ生成
-js/player.js     自機
-js/game.js       ゲーム本体
-js/main.js       起動
+index.html          遊ぶためのファイル(src/ から自動生成した1ファイル版。直接は編集しない)
+src/index.html      画面の骨組み(キャンバス・全画面ボタン)
+src/style.css       レイアウト・スマホ対応
+src/js/util.js      共通ユーティリティ・テトロミノ描画
+src/js/audio.js     効果音と BGM(WebAudio で合成)
+src/js/input.js     キーボード / ゲームパッド / タッチ
+src/js/particles.js パーティクル・エフェクト
+src/js/weapons.js   武器・自機の弾・お供ミノのミサイル
+src/js/items.js     アイテム
+src/js/enemies.js   ぷよ型の敵(26 種)と敵弾
+src/js/bosses.js    ボス(8 体)と攻撃パターン
+src/js/stages.js    ステージ(8 面)・背景・ウェーブ生成
+src/js/player.js    自機とお供ミノ
+src/js/game.js      ゲーム本体(状態遷移・連鎖・HUD)
+src/js/main.js      起動・全画面・サービスワーカー登録
+scripts/build.js    src/ を 1 ファイルの index.html にまとめる
+tests/build.test.js ビルドが壊れていないかの確認(node tests/build.test.js)
+manifest.webmanifest / sw.js / icons/  ホーム画面に追加・オフライン起動用
+```
+
+### 開発するとき
+
+```sh
+# src/ を編集したら 1 ファイル版を作り直す
+node scripts/build.js
+node tests/build.test.js
 ```
