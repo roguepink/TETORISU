@@ -18,7 +18,7 @@ class Game {
     this.player = new Player(this);
     this.state = 'title'; this.stateT = 0; this.time = 0; this.scroll = 0; this.scrollSpeed = 60;
     this.stageIndex = 0; this.waves = []; this.waveIdx = 0; this.stageTime = 0; this.phase = 'waves'; this.phaseT = 0;
-    this.score = 0; this.stageStartScore = 0; this.hi = parseInt(localStorage.getItem('tetorisu_hi') || '0', 10) || 0;
+    this.score = 0; this.stageStartScore = 0; this.hi = 0; try { this.hi = parseInt(localStorage.getItem('tetorisu_hi') || '0', 10) || 0; } catch (e) { /* ストレージ不可の環境 */ }
     this.shakeAmt = 0; this.shakeX = 0; this.shakeY = 0; this.flash = 0;
     this.chainCount = 0; this.chainShowT = 0; this.maxChain = 0; this.popCount = 0; this.stagePop = 0; this.stageMaxChain = 0; this.stageDeaths = 0;
     this.fever = 0; this.feverT = 0; this.dmgMul = 1; this.enemyTime = 1; this.hitStop = 0;
