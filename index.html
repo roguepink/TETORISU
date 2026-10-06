@@ -2909,6 +2909,18 @@ window.addEventListener('load', () => {
     fsBtn.addEventListener('click', toggleFullscreen);
     document.addEventListener('fullscreenchange', () => { fsBtn.classList.toggle('hidden', !!document.fullscreenElement); resize(); });
     window.addEventListener('keydown', (e) => { if (e.code === 'KeyF') toggleFullscreen(); });
+    // 最初のタップ（またはキー）で自動的に全画面にする。ブラウザは操作の直後しか全画面を許さないため
+    const isApp = window.matchMedia && (matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches);
+    let autoDone = isApp;
+    const autoFullscreen = (e) => {
+      if (autoDone) return;
+      if (e.target === fsBtn) { autoDone = true; return; } // 全画面ボタンそのものは、ボタンの処理にまかせる
+      if (e.type === 'keydown' && (e.code === 'KeyF' || e.code === 'Escape')) return;
+      autoDone = true;
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) toggleFullscreen();
+    };
+    window.addEventListener('pointerdown', autoFullscreen);
+    window.addEventListener('keydown', autoFullscreen);
   } else fsBtn.classList.add('hidden');
   const unlock = () => { if (Sound.ensure()) { Sound.resume(); if (game.state === 'title') Sound.play('title'); } };
   window.addEventListener('keydown', unlock); window.addEventListener('pointerdown', unlock);
