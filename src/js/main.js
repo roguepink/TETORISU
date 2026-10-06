@@ -54,6 +54,33 @@ window.addEventListener('load', () => {
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+  // iPhone だけ「ホーム画面に追加すると全画面」の案内を出す（iPhone の Safari はページを全画面にできない）
+  (function iosGuide() {
+    const el = document.getElementById('iosGuide');
+    if (!el) return;
+    const ua = navigator.userAgent || '';
+    const isIPhone = /iPhone|iPod/.test(ua);
+    const isApp = navigator.standalone === true || (window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches));
+    let off = false; try { off = localStorage.getItem('tetorisu_iosguide_off') === '1'; } catch (e) { /* ignore */ }
+    const force = /[?&]iosguide\b/.test(location.search); // 確認用
+    if (!force && (!isIPhone || isApp || off)) return;
+    // 3 番目の絵は、ゲームのぷよの顔を描く
+    const ic = document.getElementById('igIcon');
+    if (ic) {
+      const c = ic.getContext('2d'), gr = c.createLinearGradient(0, 0, 0, 68); gr.addColorStop(0, '#7CC9FF'); gr.addColorStop(1, '#D9B8FF');
+      c.fillStyle = gr; c.fillRect(0, 0, 68, 68);
+      drawPuyo(c, 36, 38, 22, PUYO_COLORS[0], { t: 1, eyeDir: { x: -0.4, y: 0 } });
+      drawMino(c, 16, 16, SHAPES.T, 5, MINO_COLORS.T, -0.3);
+    }
+    el.classList.remove('hidden');
+    const close = (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (document.getElementById('igNever').checked) { try { localStorage.setItem('tetorisu_iosguide_off', '1'); } catch (err) { /* ignore */ } }
+      el.classList.add('hidden');
+      e.currentTarget.blur();
+    };
+    document.getElementById('igClose').addEventListener('click', close);
+  })();
   // ホーム画面に追加したときにオフラインでも起動できるようにする（file:// では登録しない）
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) { /* 無視 */ }

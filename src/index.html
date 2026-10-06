@@ -18,6 +18,28 @@
     <canvas id="game" width="960" height="540"></canvas>
     <button id="fs" type="button" title="全画面 (F)">⛶ 全画面</button>
     <div id="rotate">📱 横向きにすると画面いっぱいで遊べます</div>
+    <!-- iPhone だけに出す「ホーム画面に追加」の案内（iPhone の Safari はページを全画面にできないため） -->
+    <div id="iosGuide" class="hidden" role="dialog" aria-label="ホーム画面に追加すると全画面で遊べます">
+      <div class="ig-card">
+        <div class="ig-eyebrow">iPhone の かたへ</div>
+        <div class="ig-title">ホーム画面に追加すると<br>全画面で あそべます！</div>
+        <div class="ig-steps">
+          <div class="ig-step"><div class="ig-num">1</div>
+            <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="9" width="14" height="12" rx="2" fill="none" stroke="#2a7ad0" stroke-width="2"/><path d="M12 3v11M8 7l4-4 4 4" fill="none" stroke="#2a7ad0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div class="ig-tx">Safari の<br><b>共有ボタン</b>を<br>おす</div></div>
+          <div class="ig-ar">▶</div>
+          <div class="ig-step"><div class="ig-num">2</div>
+            <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="#2a1838" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="#2a1838" stroke-width="2" stroke-linecap="round"/></svg>
+            <div class="ig-tx"><b>「ホーム画面に<br>追加」</b>を<br>えらぶ</div></div>
+          <div class="ig-ar">▶</div>
+          <div class="ig-step"><div class="ig-num">3</div>
+            <canvas id="igIcon" width="68" height="68" aria-hidden="true"></canvas>
+            <div class="ig-tx">ホーム画面の<br><b>アイコン</b>から<br>ひらく</div></div>
+        </div>
+        <button id="igClose" type="button">このまま あそぶ</button>
+        <label class="ig-check"><input id="igNever" type="checkbox"> 次から 表示しない</label>
+      </div>
+    </div>
   </div>
   <script src="js/util.js"></script>
   <script src="js/audio.js"></script>
