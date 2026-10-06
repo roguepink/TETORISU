@@ -2847,8 +2847,11 @@ class Game {
     roundRectPath(ctx, W / 2 - U.startW / 2, U.startY - U.startH / 2, U.startW, U.startH, 22);
     ctx.fillStyle = `rgba(255,${120 + pulse * 60},${170 + pulse * 40},0.95)`; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
     drawText(ctx, 'スタート！', W / 2, U.startY + 1, 24, '#fff', 'center', { outline: 'rgba(90,30,70,0.6)', outlineWidth: 4 });
-    drawText(ctx, 'Z / ENTER: スタート　移動: ↑↓←→ / WASD　ショット: Z　ボム: X　チャージ: C(長押し)　武器切替: Q / E　ポーズ: P　ミュート: M', W / 2, 520, 11, '#fff', 'center', { outline: '#2A1838', outlineWidth: 4 });
-    drawText(ctx, 'ゲームパッド・タッチ操作にも対応', W / 2, 533, 10, 'rgba(255,255,255,0.75)', 'center', { outline: '#2A1838', outlineWidth: 3 });
+    const isTouch = Input.touch.enabled || (navigator.maxTouchPoints || 0) > 0; // スマホではキーボードの説明を出さない
+    if (!isTouch) {
+      drawText(ctx, 'Z / ENTER: スタート　移動: ↑↓←→ / WASD　ショット: Z　ボム: X　チャージ: C(長押し)　武器切替: Q / E　ポーズ: P　ミュート: M', W / 2, 520, 11, '#fff', 'center', { outline: '#2A1838', outlineWidth: 4 });
+      drawText(ctx, 'ゲームパッド・タッチ操作にも対応', W / 2, 533, 10, 'rgba(255,255,255,0.75)', 'center', { outline: '#2A1838', outlineWidth: 3 });
+    }
     drawText(ctx, `HI SCORE ${String(this.hi).padStart(8, '0')}`, W - 16, 20, 16, '#FFE066', 'right', { outline: '#2A1838', outlineWidth: 4 });
     if (Sound.isMuted()) drawText(ctx, 'MUTE', 16, 20, 14, '#fff', 'left', { outline: '#2A1838', outlineWidth: 4 });
   }
