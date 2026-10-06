@@ -6,7 +6,7 @@ const DIFFS = [
   { name: 'むずかしい', hp: 1.5, bspeed: 1.3, fire: 1.55, lives: 2, bombs: 2, color: '#FF5E7A' },
 ];
 const PLAYER_DMG_SCALE = 1.0; // 自機の全弾ダメージ係数（武器ごとの数値で調整済み）
-const ENEMY_HP_SCALE = 2.5; // 通常の敵の HP 係数（元の 1.25 の 2 倍）
+const ENEMY_HP_SCALE = 1.9; // 通常の敵の HP 係数（元の 1.25 の 1.5 倍）
 // タイトル画面のボタン配置
 const TITLE_UI = { diffY: 308, diffGap: 40, diffW: 300, diffH: 34, stageY: 448, startY: 488, startW: 340, startH: 44 };
 const CHAIN_WORDS = [[12, 'きせき！！！'], [9, 'ばくはつ！！'], [7, 'すごい！！'], [5, 'ナイス！'], [3, 'いいね！'], [0, '']];
