@@ -415,7 +415,7 @@ class Enemy {
     this.popTimer = -1; this.chainIndex = 0; this.hitFlash = 0; this.squash = 0;
     this.fireTimer = o.fireDelay !== undefined ? o.fireDelay : (def.fireInterval || 1.5) * rand(0.5, 1);
     this.state = 0; this.stateT = 0;
-    this.drop = o.drop || null; this.dropChance = o.dropChance !== undefined ? o.dropChance : (def.dropChance !== undefined ? def.dropChance : 0.022);
+    this.drop = o.drop || null; this.dropChance = o.dropChance !== undefined ? o.dropChance : (def.dropChance !== undefined ? def.dropChance : 0.03);
     this.eyeDir = { x: -0.5, y: 0 }; this.blinkT = rand(1, 4); this.blink = false; this.angry = false;
     this.isBoss = false; this.noChain = !!def.noChain; this.popImmune = 0; this.boss = null;
     if (def.init) def.init(this, o);

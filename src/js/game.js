@@ -130,7 +130,7 @@ class Game {
     }
     if (e.boss && !e.boss.dead) { e.boss.takeDamage(40 + chain * 20, this); this.texts.add(e.boss.x, e.boss.y - e.boss.r - 20, 'いたい！', '#fff', 18, { pop: true }); }
     let key = e.drop;
-    if (!key && Math.random() < e.dropChance + chain * 0.005) key = randomItemKey(this);
+    if (!key && Math.random() < e.dropChance + chain * 0.007) key = randomItemKey(this);
     if (key) this.spawnItem(key, e.x, e.y);
   }
   // ---------- 状態遷移 ----------
