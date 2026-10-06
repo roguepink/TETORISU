@@ -121,9 +121,9 @@ function generateWaves(si) {
     const progress = t / st.duration; // 序盤はゆるく、終盤に向けて密度アップ
     t += (pat.gap * (1.3 - 0.55 * progress) / st.spawnMul) * (0.85 + rng() * 0.3);
   }
-  for (let ct = 10; ct < st.duration - 8; ct += 36) waves.push({ t: ct, fn: (g) => SP.carrier(g) });
+  for (let ct = 10; ct < st.duration - 8; ct += 30) waves.push({ t: ct, fn: (g) => SP.carrier(g) });
   for (let ct = 14; ct < st.duration - 8; ct += 34) waves.push({ t: ct, fn: SP.optionCarrier });
-  for (let ct = 26; ct < st.duration - 8; ct += 55) waves.push({ t: ct, fn: SP.goodCarrier });
+  for (let ct = 24; ct < st.duration - 8; ct += 46) waves.push({ t: ct, fn: SP.goodCarrier });
   for (let ct = 40; ct < st.duration - 8; ct += 60) waves.push({ t: ct, fn: SP.rainbow });
   if (si >= 1) for (let ct = 30; ct < st.duration - 8; ct += 33) waves.push({ t: ct, fn: SP.ojama });
   waves.sort((a, b) => a.t - b.t);
