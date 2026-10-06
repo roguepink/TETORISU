@@ -23,6 +23,22 @@ body { display: flex; align-items: center; justify-content: center; font-family:
 @media (orientation: portrait) and (max-width: 900px) { #rotate { display: block; } }
 @media (pointer: coarse) { #fs { right: auto; left: 8px; bottom: 8px; } }
 canvas { display: block; background: #0c0618; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; image-rendering: auto; border-radius: 6px; box-shadow: 0 0 40px rgba(120, 60, 200, 0.35); }
+
+/* iPhone の「ホーム画面に追加」案内 */
+.hidden { display: none !important; }
+#iosGuide { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(20, 8, 40, 0.55); font-family: 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', 'IPAPGothic', sans-serif; touch-action: manipulation; }
+#iosGuide .ig-card { width: min(92vw, 520px); max-height: 92vh; overflow: auto; background: #fffdf8; border-radius: 22px; border: 4px solid #ff8fb0; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35); padding: 16px 20px 14px; color: #2a1838; text-align: center; box-sizing: border-box; }
+#iosGuide .ig-eyebrow { font-size: 13px; font-weight: 800; color: #ff5e8a; letter-spacing: 0.1em; }
+#iosGuide .ig-title { font-size: 19px; font-weight: 900; margin: 4px 0 10px; line-height: 1.35; }
+#iosGuide .ig-steps { display: flex; gap: 8px; justify-content: center; align-items: stretch; }
+#iosGuide .ig-step { flex: 1; background: #f3f0ff; border-radius: 14px; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; }
+#iosGuide .ig-num { position: absolute; top: -8px; left: -6px; width: 22px; height: 22px; border-radius: 50%; background: #ff5e8a; color: #fff; font-size: 13px; font-weight: 900; line-height: 22px; }
+#iosGuide .ig-tx { font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+#iosGuide .ig-ar { align-self: center; color: #ff8fb0; font-size: 14px; }
+#iosGuide #igIcon { width: 34px; height: 34px; border-radius: 8px; }
+#iosGuide #igClose { display: block; margin: 12px auto 0; border: 0; border-radius: 999px; background: #ff7fae; color: #fff; font: 900 16px 'M PLUS Rounded 1c', 'Hiragino Maru Gothic ProN', sans-serif; padding: 10px 26px; cursor: pointer; }
+#iosGuide .ig-check { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: #6a5a7a; }
+#iosGuide .ig-check input { width: 16px; height: 16px; }
 </style>
 </head>
 <body>
@@ -30,6 +46,28 @@ canvas { display: block; background: #0c0618; touch-action: none; user-select: n
     <canvas id="game" width="960" height="540"></canvas>
     <button id="fs" type="button" title="全画面 (F)">⛶ 全画面</button>
     <div id="rotate">📱 横向きにすると画面いっぱいで遊べます</div>
+    <!-- iPhone だけに出す「ホーム画面に追加」の案内（iPhone の Safari はページを全画面にできないため） -->
+    <div id="iosGuide" class="hidden" role="dialog" aria-label="ホーム画面に追加すると全画面で遊べます">
+      <div class="ig-card">
+        <div class="ig-eyebrow">iPhone の かたへ</div>
+        <div class="ig-title">ホーム画面に追加すると<br>全画面で あそべます！</div>
+        <div class="ig-steps">
+          <div class="ig-step"><div class="ig-num">1</div>
+            <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="9" width="14" height="12" rx="2" fill="none" stroke="#2a7ad0" stroke-width="2"/><path d="M12 3v11M8 7l4-4 4 4" fill="none" stroke="#2a7ad0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div class="ig-tx">Safari の<br><b>共有ボタン</b>を<br>おす</div></div>
+          <div class="ig-ar">▶</div>
+          <div class="ig-step"><div class="ig-num">2</div>
+            <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="#2a1838" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="#2a1838" stroke-width="2" stroke-linecap="round"/></svg>
+            <div class="ig-tx"><b>「ホーム画面に<br>追加」</b>を<br>えらぶ</div></div>
+          <div class="ig-ar">▶</div>
+          <div class="ig-step"><div class="ig-num">3</div>
+            <canvas id="igIcon" width="68" height="68" aria-hidden="true"></canvas>
+            <div class="ig-tx">ホーム画面の<br><b>アイコン</b>から<br>ひらく</div></div>
+        </div>
+        <button id="igClose" type="button">このまま あそぶ</button>
+        <label class="ig-check"><input id="igNever" type="checkbox"> 次から 表示しない</label>
+      </div>
+    </div>
   </div>
 <script>
 /* ---- js/util.js ---- */
@@ -2931,6 +2969,33 @@ window.addEventListener('load', () => {
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+  // iPhone だけ「ホーム画面に追加すると全画面」の案内を出す（iPhone の Safari はページを全画面にできない）
+  (function iosGuide() {
+    const el = document.getElementById('iosGuide');
+    if (!el) return;
+    const ua = navigator.userAgent || '';
+    const isIPhone = /iPhone|iPod/.test(ua);
+    const isApp = navigator.standalone === true || (window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches));
+    let off = false; try { off = localStorage.getItem('tetorisu_iosguide_off') === '1'; } catch (e) { /* ignore */ }
+    const force = /[?&]iosguide\b/.test(location.search); // 確認用
+    if (!force && (!isIPhone || isApp || off)) return;
+    // 3 番目の絵は、ゲームのぷよの顔を描く
+    const ic = document.getElementById('igIcon');
+    if (ic) {
+      const c = ic.getContext('2d'), gr = c.createLinearGradient(0, 0, 0, 68); gr.addColorStop(0, '#7CC9FF'); gr.addColorStop(1, '#D9B8FF');
+      c.fillStyle = gr; c.fillRect(0, 0, 68, 68);
+      drawPuyo(c, 36, 38, 22, PUYO_COLORS[0], { t: 1, eyeDir: { x: -0.4, y: 0 } });
+      drawMino(c, 16, 16, SHAPES.T, 5, MINO_COLORS.T, -0.3);
+    }
+    el.classList.remove('hidden');
+    const close = (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (document.getElementById('igNever').checked) { try { localStorage.setItem('tetorisu_iosguide_off', '1'); } catch (err) { /* ignore */ } }
+      el.classList.add('hidden');
+      e.currentTarget.blur();
+    };
+    document.getElementById('igClose').addEventListener('click', close);
+  })();
   // ホーム画面に追加したときにオフラインでも起動できるようにする（file:// では登録しない）
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) { /* 無視 */ }
