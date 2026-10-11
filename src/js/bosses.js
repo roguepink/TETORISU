@@ -179,7 +179,7 @@ class Boss extends Enemy {
       if (this.attack.start) this.attack.start(this, g);
     }
     this.attackT += d;
-    this.attack.tick(this, d, g, this.attackT);
+    this.attack.tick(this, d * BOSS_FIRE_SCALE, g, this.attackT);
     if (this.attackT > this.attack.dur) this.attack = null;
     if (!this.attack || !this.attack.noMove) {
       const spd = this.phase === 2 ? 1.5 : 1;
