@@ -9,6 +9,7 @@ class EBullet {
     this.color = o.color === undefined ? 0 : o.color; this.life = o.life || 8; this.age = 0; this.dead = false;
     this.homing = o.homing || 0; this.accel = o.accel || 0;
     this.bounces = o.bounces || 0; this.grav = o.grav || 0; this.amp = o.amp || 0; this.freq = o.freq || 6; this.wt = 0;
+    this.splitT = o.splitT || 0; this.splitN = o.splitN || 5; this.spin = rand(TAU);
   }
   update(dt, g) {
     this.age += dt;
@@ -26,23 +27,31 @@ class EBullet {
       if (this.y < 46 + this.r && this.vy < 0) { this.y = 46 + this.r; this.vy = -this.vy; this.bounces--; }
       else if (this.y > H - this.r && this.vy > 0) { this.y = H - this.r; this.vy = -this.vy; this.bounces--; }
     }
+    // 大きなぷよ弾は、しばらく飛ぶと ちびぷよに はじける
+    if (this.splitT && this.age >= this.splitT && !this.dead) {
+      this.dead = true;
+      fxPuyoPop(g.particles, this.x, this.y, this.r, puyoColor(this.color, g.time), 0); Sound.sfx.pop(0);
+      for (let i = 0; i < this.splitN; i++) { const a = this.spin + (i / this.splitN) * TAU, sp = 150 * g.diff.bspeed; g.addEBullet(new EBullet(this.x, this.y, Math.cos(a) * sp, Math.sin(a) * sp, { color: this.color, r: 7 })); }
+      return;
+    }
     if (this.age > this.life || this.x < -60 || this.x > W + 80 || this.y < -60 || this.y > H + 60) this.dead = true;
   }
   draw(ctx, t) {
     const col = puyoColor(this.color, t);
-    ctx.save(); ctx.translate(this.x, this.y);
-    if (this.kind === 'needle') ctx.rotate(Math.atan2(this.vy, this.vx));
-    ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath();
-    if (this.kind === 'needle') ctx.ellipse(0, 0, this.r * 2.9, this.r * 1.35, 0, 0, TAU); else ctx.arc(0, 0, this.r + 3, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = col.dark; ctx.beginPath();
-    if (this.kind === 'needle') ctx.ellipse(0, 0, this.r * 2.6, this.r, 0, 0, TAU); else ctx.arc(0, 0, this.r + 1.5, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = col.main; ctx.beginPath();
-    if (this.kind === 'needle') ctx.ellipse(0, 0, this.r * 2.2, this.r * 0.7, 0, 0, TAU); else ctx.arc(0, 0, this.r, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(-this.r * 0.35, -this.r * 0.35, this.r * 0.32, 0, TAU); ctx.fill();
-    ctx.restore();
+    if (this.kind === 'needle') { // しずく型のぷよ
+      ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(Math.atan2(this.vy, this.vx) + Math.PI / 2);
+      const r = this.r * 1.25;
+      const drop = () => { ctx.beginPath(); ctx.moveTo(0, r * 1.9); ctx.bezierCurveTo(r * 1.1, r * 0.4, r * 1.1, -r, 0, -r); ctx.bezierCurveTo(-r * 1.1, -r, -r * 1.1, r * 0.4, 0, r * 1.9); ctx.closePath(); };
+      ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.save(); ctx.scale(1.25, 1.2); drop(); ctx.fill(); ctx.restore();
+      ctx.fillStyle = col.main; drop(); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = col.dark; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.beginPath(); ctx.arc(-r * 0.35, -r * 0.2, r * 0.28, 0, TAU); ctx.fill();
+      ctx.restore(); return;
+    }
+    // ちびぷよ（白いふちで見やすく）
+    ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(this.x, this.y + 0.5, this.r + 3, 0, TAU); ctx.fill();
+    const sq = Math.sin(this.age * 14 + this.spin) * 0.08;
+    const big = this.r >= 10 || this.splitT;
+    drawPuyo(ctx, this.x, this.y, this.r, col, { t: this.age + this.spin, sx: 1 + sq, sy: 1 - sq, noFace: this.r < 6, eyeDir: { x: Math.sign(this.vx) * 0.6 || -0.6, y: 0 }, angry: big, flash: this.splitT && this.splitT - this.age < 0.25 ? 0.5 : 0 });
   }
 }
 
@@ -159,7 +168,7 @@ const ENEMY_TYPES = {
     hp: 165, r: 38, speed: 70, score: 500, amp: 18, dropChance: 0.35, fireInterval: 1.9,
     update(e, dt, g) {
       e.x -= e.speed * dt; e.y = e.baseY + Math.sin(e.t * 1.3 + e.phase) * e.amp;
-      if (e.x < W - 40) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = e.def.fireInterval / g.fireRate; if (e.hp < e.maxHp * 0.6) e.shootRing(g, 10, 140, e.t); else e.shootAimed(g, 170, 3, 0.35); } }
+      if (e.x < W - 40) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = e.def.fireInterval / g.fireRate; if (e.hp < e.maxHp * 0.6) e.shootRing(g, 10, 140, e.t); else e.shootAimed(g, 150, 1, 0, { r: 13, splitT: 0.9, splitN: 6 }); } }
     },
     onDeath(e, g) {
       for (let i = 0; i < 4; i++) {
@@ -313,7 +322,7 @@ const ENEMY_TYPES = {
     init(e, o) { e.top = o.top !== false; e.y = e.top ? 72 : H - 50; },
     update(e, dt, g) {
       e.x -= e.speed * dt; e.fireTimer -= dt;
-      if (e.fireTimer <= 0 && e.x < W - 20) { e.fireTimer = e.def.fireInterval / g.fireRate; g.addEBullet(new EBullet(e.x, e.y, -40, (e.top ? 60 : -60) * g.diff.bspeed, { color: e.color, kind: 'grav', grav: e.top ? 420 : -420 })); Sound.sfx.enemyShot(); }
+      if (e.fireTimer <= 0 && e.x < W - 20) { e.fireTimer = e.def.fireInterval / g.fireRate; g.addEBullet(new EBullet(e.x, e.y, -40, (e.top ? 60 : -60) * g.diff.bspeed, { color: -1, r: 9, grav: e.top ? 420 : -420, bounces: 1, life: 5 })); Sound.sfx.enemyShot(); }
     },
   },
   // 機雷ぷよ：倒すか近づくと弾をまき散らす
@@ -470,7 +479,8 @@ class Enemy {
       const a = 0.5 + Math.sin(g.time * 18) * 0.5; ctx.fillStyle = `rgba(255,80,110,${0.4 + a * 0.6})`; ctx.beginPath(); ctx.moveTo(8, this.y - 14); ctx.lineTo(30, this.y); ctx.lineTo(8, this.y + 14); ctx.closePath(); ctx.fill();
       drawText(ctx, '!', 44, this.y, 22, '#FF5E7A', 'center', { outline: '#fff' });
     }
-    const o = { t: this.t, phase: this.phase, eyeDir: this.eyeDir, blink: this.blink, flash: this.hitFlash, squash: this.squash, marked: this.popTimer >= 0, angry: this.angry || (this.type === 'ojama') };
+    const boing = Math.pow(Math.max(0, Math.sin(this.t * 3.2 + this.phase)), 10) * 0.16; // ときどき「ぷよん」
+    const o = { t: this.t, phase: this.phase, eyeDir: this.eyeDir, blink: this.blink, flash: this.hitFlash, squash: this.squash + boing, marked: this.popTimer >= 0, angry: this.angry || (this.type === 'ojama') };
     if (this.color === 5) o.glow = 14;
     drawPuyo(ctx, this.x, this.y, this.r, col, o);
     drawAccessory(ctx, this, col);

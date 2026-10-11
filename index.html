@@ -1011,6 +1011,7 @@ class EBullet {
     this.color = o.color === undefined ? 0 : o.color; this.life = o.life || 8; this.age = 0; this.dead = false;
     this.homing = o.homing || 0; this.accel = o.accel || 0;
     this.bounces = o.bounces || 0; this.grav = o.grav || 0; this.amp = o.amp || 0; this.freq = o.freq || 6; this.wt = 0;
+    this.splitT = o.splitT || 0; this.splitN = o.splitN || 5; this.spin = rand(TAU);
   }
   update(dt, g) {
     this.age += dt;
@@ -1028,23 +1029,31 @@ class EBullet {
       if (this.y < 46 + this.r && this.vy < 0) { this.y = 46 + this.r; this.vy = -this.vy; this.bounces--; }
       else if (this.y > H - this.r && this.vy > 0) { this.y = H - this.r; this.vy = -this.vy; this.bounces--; }
     }
+    // 大きなぷよ弾は、しばらく飛ぶと ちびぷよに はじける
+    if (this.splitT && this.age >= this.splitT && !this.dead) {
+      this.dead = true;
+      fxPuyoPop(g.particles, this.x, this.y, this.r, puyoColor(this.color, g.time), 0); Sound.sfx.pop(0);
+      for (let i = 0; i < this.splitN; i++) { const a = this.spin + (i / this.splitN) * TAU, sp = 150 * g.diff.bspeed; g.addEBullet(new EBullet(this.x, this.y, Math.cos(a) * sp, Math.sin(a) * sp, { color: this.color, r: 7 })); }
+      return;
+    }
     if (this.age > this.life || this.x < -60 || this.x > W + 80 || this.y < -60 || this.y > H + 60) this.dead = true;
   }
   draw(ctx, t) {
     const col = puyoColor(this.color, t);
-    ctx.save(); ctx.translate(this.x, this.y);
-    if (this.kind === 'needle') ctx.rotate(Math.atan2(this.vy, this.vx));
-    ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath();
-    if (this.kind === 'needle') ctx.ellipse(0, 0, this.r * 2.9, this.r * 1.35, 0, 0, TAU); else ctx.arc(0, 0, this.r + 3, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = col.dark; ctx.beginPath();
-    if (this.kind === 'needle') ctx.ellipse(0, 0, this.r * 2.6, this.r, 0, 0, TAU); else ctx.arc(0, 0, this.r + 1.5, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = col.main; ctx.beginPath();
-    if (this.kind === 'needle') ctx.ellipse(0, 0, this.r * 2.2, this.r * 0.7, 0, 0, TAU); else ctx.arc(0, 0, this.r, 0, TAU);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(-this.r * 0.35, -this.r * 0.35, this.r * 0.32, 0, TAU); ctx.fill();
-    ctx.restore();
+    if (this.kind === 'needle') { // しずく型のぷよ
+      ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(Math.atan2(this.vy, this.vx) + Math.PI / 2);
+      const r = this.r * 1.25;
+      const drop = () => { ctx.beginPath(); ctx.moveTo(0, r * 1.9); ctx.bezierCurveTo(r * 1.1, r * 0.4, r * 1.1, -r, 0, -r); ctx.bezierCurveTo(-r * 1.1, -r, -r * 1.1, r * 0.4, 0, r * 1.9); ctx.closePath(); };
+      ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.save(); ctx.scale(1.25, 1.2); drop(); ctx.fill(); ctx.restore();
+      ctx.fillStyle = col.main; drop(); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = col.dark; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.beginPath(); ctx.arc(-r * 0.35, -r * 0.2, r * 0.28, 0, TAU); ctx.fill();
+      ctx.restore(); return;
+    }
+    // ちびぷよ（白いふちで見やすく）
+    ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(this.x, this.y + 0.5, this.r + 3, 0, TAU); ctx.fill();
+    const sq = Math.sin(this.age * 14 + this.spin) * 0.08;
+    const big = this.r >= 10 || this.splitT;
+    drawPuyo(ctx, this.x, this.y, this.r, col, { t: this.age + this.spin, sx: 1 + sq, sy: 1 - sq, noFace: this.r < 6, eyeDir: { x: Math.sign(this.vx) * 0.6 || -0.6, y: 0 }, angry: big, flash: this.splitT && this.splitT - this.age < 0.25 ? 0.5 : 0 });
   }
 }
 
@@ -1161,7 +1170,7 @@ const ENEMY_TYPES = {
     hp: 165, r: 38, speed: 70, score: 500, amp: 18, dropChance: 0.35, fireInterval: 1.9,
     update(e, dt, g) {
       e.x -= e.speed * dt; e.y = e.baseY + Math.sin(e.t * 1.3 + e.phase) * e.amp;
-      if (e.x < W - 40) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = e.def.fireInterval / g.fireRate; if (e.hp < e.maxHp * 0.6) e.shootRing(g, 10, 140, e.t); else e.shootAimed(g, 170, 3, 0.35); } }
+      if (e.x < W - 40) { e.fireTimer -= dt; if (e.fireTimer <= 0) { e.fireTimer = e.def.fireInterval / g.fireRate; if (e.hp < e.maxHp * 0.6) e.shootRing(g, 10, 140, e.t); else e.shootAimed(g, 150, 1, 0, { r: 13, splitT: 0.9, splitN: 6 }); } }
     },
     onDeath(e, g) {
       for (let i = 0; i < 4; i++) {
@@ -1315,7 +1324,7 @@ const ENEMY_TYPES = {
     init(e, o) { e.top = o.top !== false; e.y = e.top ? 72 : H - 50; },
     update(e, dt, g) {
       e.x -= e.speed * dt; e.fireTimer -= dt;
-      if (e.fireTimer <= 0 && e.x < W - 20) { e.fireTimer = e.def.fireInterval / g.fireRate; g.addEBullet(new EBullet(e.x, e.y, -40, (e.top ? 60 : -60) * g.diff.bspeed, { color: e.color, kind: 'grav', grav: e.top ? 420 : -420 })); Sound.sfx.enemyShot(); }
+      if (e.fireTimer <= 0 && e.x < W - 20) { e.fireTimer = e.def.fireInterval / g.fireRate; g.addEBullet(new EBullet(e.x, e.y, -40, (e.top ? 60 : -60) * g.diff.bspeed, { color: -1, r: 9, grav: e.top ? 420 : -420, bounces: 1, life: 5 })); Sound.sfx.enemyShot(); }
     },
   },
   // 機雷ぷよ：倒すか近づくと弾をまき散らす
@@ -1472,7 +1481,8 @@ class Enemy {
       const a = 0.5 + Math.sin(g.time * 18) * 0.5; ctx.fillStyle = `rgba(255,80,110,${0.4 + a * 0.6})`; ctx.beginPath(); ctx.moveTo(8, this.y - 14); ctx.lineTo(30, this.y); ctx.lineTo(8, this.y + 14); ctx.closePath(); ctx.fill();
       drawText(ctx, '!', 44, this.y, 22, '#FF5E7A', 'center', { outline: '#fff' });
     }
-    const o = { t: this.t, phase: this.phase, eyeDir: this.eyeDir, blink: this.blink, flash: this.hitFlash, squash: this.squash, marked: this.popTimer >= 0, angry: this.angry || (this.type === 'ojama') };
+    const boing = Math.pow(Math.max(0, Math.sin(this.t * 3.2 + this.phase)), 10) * 0.16; // ときどき「ぷよん」
+    const o = { t: this.t, phase: this.phase, eyeDir: this.eyeDir, blink: this.blink, flash: this.hitFlash, squash: this.squash + boing, marked: this.popTimer >= 0, angry: this.angry || (this.type === 'ojama') };
     if (this.color === 5) o.glow = 14;
     drawPuyo(ctx, this.x, this.y, this.r, col, o);
     drawAccessory(ctx, this, col);
@@ -1566,41 +1576,56 @@ const ATK = {
   geyser: (times = 3, interval = 1.1) => ({ dur: times * interval + 0.8, start(b) { b.acc = interval * 0.5; b.cnt = 0; }, tick(b, dt, g) { b.acc += dt; if (b.acc >= interval && b.cnt < times) { b.acc -= interval; b.cnt++; const x = g.player.x + rand(-60, 140); for (let i = 0; i < 9; i++) g.addEBullet(new EBullet(x + rand(-8, 8), H + 20 + i * 26, 0, -(380 + i * 10) * g.diff.bspeed, { color: b.color, kind: 'needle', life: 4 })); g.texts.add(x, H - 30, '！', '#FFB347', 26, { pop: true, life: 0.6 }); Sound.sfx.enemyShot(); } } }),
   snowballs: (times = 3, n = 3, interval = 1) => ({ dur: times * interval + 0.8, start(b) { b.acc = interval * 0.5; b.cnt = 0; }, tick(b, dt, g) { b.acc += dt; if (b.acc >= interval && b.cnt < times) { b.acc -= interval; b.cnt++; const base = Math.atan2(g.player.y - b.y, g.player.x - b.x); for (let i = 0; i < n; i++) b.shoot(g, base + (i - (n - 1) / 2) * 0.3, 150, { kind: 'big', r: 16, accel: 60, life: 6 }); Sound.sfx.enemyShot(); b.squash = 0.35; } } }),
   blizzard: (dur = 3, rate = 0.3, speed = 300) => ({ dur, start(b) { b.acc = 0; }, tick(b, dt, g) { b.acc += dt; while (b.acc >= rate) { b.acc -= rate; const y = rand(60, H - 20); g.addEBullet(new EBullet(W + 20, y, -speed * g.diff.bspeed, 0, { color: b.color, kind: 'needle', amp: rand(20, 50), freq: 5, life: 5 })); } } }),
+  // れんさ攻撃：1 れんさ、2 れんさ…と だんだん大きくなる
+  rensa: (maxChain = 3, interval = 0.85) => ({ dur: maxChain * interval + 0.8, start(b) { b.acc = interval * 0.6; b.cnt = 0; }, tick(b, dt, g) {
+    b.acc += dt;
+    if (b.acc >= interval && b.cnt < maxChain) {
+      b.acc -= interval; b.cnt++; const k = b.cnt;
+      g.texts.add(b.x, b.y - b.r - 24, `${k}れんさ！`, k >= 3 ? '#FFE066' : '#fff', 20 + k * 4, { pop: true, life: 0.8 });
+      Sound.sfx.chainText(k); b.squash = 0.35;
+      if (k < maxChain) b.shootRing(g, 6 + k * 2, 140 + k * 15, b.t + k * 0.4);
+      else for (let i = -1; i <= 1; i++) b.shootAimed(g, 160, 1, 0, { r: 13, splitT: 0.8 + i * 0.1 + 0.1, splitN: 6, color: b.color });
+    }
+  } }),
+  // おじゃまぷよが 空から ふってくる
+  ojamaRain: (dur = 3, rate = 0.22) => ({ dur, start(b, g) { b.acc = 0; g.texts.add(W / 2, 90, 'おじゃまぷよ！', '#C8CCD8', 22, { pop: true, life: 1 }); }, tick(b, dt, g) { b.acc += dt; while (b.acc >= rate) { b.acc -= rate; g.addEBullet(new EBullet(rand(200, W - 40), -16, rand(-60, -10), 40 * g.diff.bspeed, { color: -1, r: 9, grav: 360, bounces: 1, life: 6 })); } } }),
+  // はじけるぷよ弾
+  puyoSplit: (times = 3, interval = 1) => ({ dur: times * interval + 0.8, start(b) { b.acc = interval * 0.5; b.cnt = 0; }, tick(b, dt, g) { b.acc += dt; if (b.acc >= interval && b.cnt < times) { b.acc -= interval; b.cnt++; b.shootAimed(g, 170, 1, 0, { r: 13, splitT: 0.85, splitN: 6 }); b.squash = 0.3; } } }),
   minoDrop: (dur = 3, rate = 0.35) => ({ dur, start(b) { b.acc = 0; }, tick(b, dt, g) { b.acc += dt; while (b.acc >= rate) { b.acc -= rate; g.addEBullet(new EBullet(rand(100, W - 60), -20, -40, 120 * g.diff.bspeed, { color: b.color, kind: 'big', accel: 260, life: 6 })); } } }),
 };
 
 const BOSS_ATTACKS = [
   [ // 1 プヨキング
-    [ATK.aimed(1, 0.55, 220, 0, 3), ATK.bounce(4, 300, 3), ATK.summon('drift', 4, { sameColor: true, spread: true }), ATK.ring(10, 170, 2, 1), ATK.gravArc(2, 3), ATK.waveShots(2.5, 0.5, 200)],
-    [ATK.aimed(3, 0.5, 250, 0.25, 3), ATK.dash(680), ATK.ring(14, 190, 3, 0.7), ATK.bounce(4, 400, 5), ATK.formation(), ATK.bouncers(3, 230, 2, 1), ATK.rotatingFan(3, 0.25, 200, 3), ATK.gravArc(3, 4)],
+    [ATK.rensa(3, 0.9), ATK.puyoSplit(2, 1.1), ATK.aimed(1, 0.55, 220, 0, 3), ATK.bounce(4, 300, 3), ATK.summon('drift', 4, { sameColor: true, spread: true }), ATK.ring(10, 170, 2, 1), ATK.gravArc(2, 3), ATK.waveShots(2.5, 0.5, 200)],
+    [ATK.rensa(4, 0.8), ATK.ojamaRain(3, 0.24), ATK.aimed(3, 0.5, 250, 0.25, 3), ATK.dash(680), ATK.ring(14, 190, 3, 0.7), ATK.bounce(4, 400, 5), ATK.formation(), ATK.bouncers(3, 230, 2, 1), ATK.rotatingFan(3, 0.25, 200, 3), ATK.gravArc(3, 4)],
   ],
   [ // 2 プヨクラゲ
-    [ATK.ring(12, 180, 3, 0.9), ATK.aimed(5, 0.8, 200, 0.18, 3), ATK.homingBurst(4, 160, 2, 1.2), ATK.summon('bouncer', 3, { sameColor: true }), ATK.waveShots(3, 0.4, 210), ATK.gravArc(3, 4), ATK.bouncers(3, 220, 2, 1)],
-    [ATK.spiral(3, 0.09, 200, 0.35, 2), ATK.ring(16, 200, 3, 0.7), ATK.curtain(240, 3, 1.4), ATK.summon('bouncer', 4), ATK.homingBurst(6, 170, 2, 1), ATK.crossSpiral(3, 0.1, 190, 0.3), ATK.movingCurtain(3.5, 230, 0.5), ATK.mines(4)],
+    [ATK.rensa(3, 0.9), ATK.puyoSplit(2, 1.1), ATK.ring(12, 180, 3, 0.9), ATK.aimed(5, 0.8, 200, 0.18, 3), ATK.homingBurst(4, 160, 2, 1.2), ATK.summon('bouncer', 3, { sameColor: true }), ATK.waveShots(3, 0.4, 210), ATK.gravArc(3, 4), ATK.bouncers(3, 220, 2, 1)],
+    [ATK.rensa(4, 0.8), ATK.ojamaRain(3, 0.24), ATK.spiral(3, 0.09, 200, 0.35, 2), ATK.ring(16, 200, 3, 0.7), ATK.curtain(240, 3, 1.4), ATK.summon('bouncer', 4), ATK.homingBurst(6, 170, 2, 1), ATK.crossSpiral(3, 0.1, 190, 0.3), ATK.movingCurtain(3.5, 230, 0.5), ATK.mines(4)],
   ],
   [ // 3 キツネプヨ：狐火と素早い動き
-    [ATK.homingRing(8, 140, 2, 1.4), ATK.aimed(3, 0.45, 260, 0.22, 3), ATK.dash(720), ATK.waveShots(3, 0.4, 220), ATK.summon('looper', 3), ATK.rotatingFan(3, 0.22, 220, 5)],
-    [ATK.homingRing(12, 160, 2, 1.2), ATK.dash(800), ATK.spiral(3, 0.09, 210, 0.45, 2), ATK.bouncers(4, 240, 2, 0.9), ATK.summon('diver', 3), ATK.crossSpiral(3, 0.09, 200, 0.35), ATK.needleRows(4, 0.6, 400), ATK.mines(3)],
+    [ATK.rensa(3, 0.9), ATK.puyoSplit(2, 1.1), ATK.homingRing(8, 140, 2, 1.4), ATK.aimed(3, 0.45, 260, 0.22, 3), ATK.dash(720), ATK.waveShots(3, 0.4, 220), ATK.summon('looper', 3), ATK.rotatingFan(3, 0.22, 220, 5)],
+    [ATK.rensa(4, 0.8), ATK.ojamaRain(3, 0.24), ATK.homingRing(12, 160, 2, 1.2), ATK.dash(800), ATK.spiral(3, 0.09, 210, 0.45, 2), ATK.bouncers(4, 240, 2, 0.9), ATK.summon('diver', 3), ATK.crossSpiral(3, 0.09, 200, 0.35), ATK.needleRows(4, 0.6, 400), ATK.mines(3)],
   ],
   [ // 4 ネオンツインズ
-    [ATK.aimed(1, 0.3, 300, 0, 3), ATK.sweep(2.6), ATK.curtain(300, 2, 1.5, 120), ATK.dash(760), ATK.needleRows(4, 0.7, 380), ATK.bouncers(2, 260, 2, 0.9), ATK.waveShots(2.5, 0.35, 240)],
-    [ATK.spiral(3, 0.08, 230, 0.5, 1), ATK.aimed(3, 0.35, 320, 0.2, 3), ATK.sweep(3, 0.04), ATK.summon('homer', 3), ATK.dash(820), ATK.rotatingFan(3, 0.18, 260, 5), ATK.crossSpiral(3, 0.08, 220, 0.4), ATK.movingCurtain(3, 300, 0.4), ATK.needleRows(5, 0.55, 420)],
+    [ATK.rensa(3, 0.9), ATK.puyoSplit(2, 1.1), ATK.aimed(1, 0.3, 300, 0, 3), ATK.sweep(2.6), ATK.curtain(300, 2, 1.5, 120), ATK.dash(760), ATK.needleRows(4, 0.7, 380), ATK.bouncers(2, 260, 2, 0.9), ATK.waveShots(2.5, 0.35, 240)],
+    [ATK.rensa(4, 0.8), ATK.ojamaRain(3, 0.24), ATK.spiral(3, 0.08, 230, 0.5, 1), ATK.aimed(3, 0.35, 320, 0.2, 3), ATK.sweep(3, 0.04), ATK.summon('homer', 3), ATK.dash(820), ATK.rotatingFan(3, 0.18, 260, 5), ATK.crossSpiral(3, 0.08, 220, 0.4), ATK.movingCurtain(3, 300, 0.4), ATK.needleRows(5, 0.55, 420)],
   ],
   [ // 5 マグマプヨ：火山弾と間欠泉
-    [ATK.emberRain(3, 0.14), ATK.geyser(3, 1.2), ATK.aimed(5, 0.7, 230, 0.16, 3), ATK.ring(14, 180, 3, 0.8), ATK.gravArc(3, 5), ATK.summon('bomber', 3), ATK.rotatingFan(3, 0.2, 230, 5)],
-    [ATK.emberRain(4, 0.09), ATK.geyser(4, 0.9), ATK.spiral(3, 0.08, 220, 0.5, 3), ATK.curtain(270, 3, 1.2), ATK.homingBurst(5, 170, 2, 1.1), ATK.mines(4), ATK.crossSpiral(3, 0.08, 210, 0.45), ATK.bouncers(4, 250, 2, 1), ATK.summon('dasher', 3)],
+    [ATK.rensa(3, 0.9), ATK.puyoSplit(2, 1.1), ATK.emberRain(3, 0.14), ATK.geyser(3, 1.2), ATK.aimed(5, 0.7, 230, 0.16, 3), ATK.ring(14, 180, 3, 0.8), ATK.gravArc(3, 5), ATK.summon('bomber', 3), ATK.rotatingFan(3, 0.2, 230, 5)],
+    [ATK.rensa(4, 0.8), ATK.ojamaRain(3, 0.24), ATK.emberRain(4, 0.09), ATK.geyser(4, 0.9), ATK.spiral(3, 0.08, 220, 0.5, 3), ATK.curtain(270, 3, 1.2), ATK.homingBurst(5, 170, 2, 1.1), ATK.mines(4), ATK.crossSpiral(3, 0.08, 210, 0.45), ATK.bouncers(4, 250, 2, 1), ATK.summon('dasher', 3)],
   ],
   [ // 6 クリスタルプヨ
-    [ATK.rainNeedles(3, 0.14, 340), ATK.ring(14, 190, 3, 0.8), ATK.aimed(5, 0.7, 220, 0.15, 3), ATK.spiral(3, 0.1, 190, 0.4, 3), ATK.gravArc(3, 5), ATK.waveShots(3, 0.35, 200), ATK.mines(3), ATK.bouncers(3, 240, 2, 1)],
-    [ATK.rainNeedles(4, 0.09, 380), ATK.curtain(260, 3, 1.2), ATK.homingBurst(6, 170, 2, 1.2), ATK.ring(20, 210, 3, 0.6), ATK.summon('ojama', 2), ATK.spiral(3, 0.08, 210, 0.6, 4), ATK.bouncers(4, 240, 2, 1), ATK.crossSpiral(3.5, 0.07, 200, 0.5), ATK.needleRows(5, 0.6, 420), ATK.movingCurtain(3.5, 260, 0.45)],
+    [ATK.rensa(3, 0.9), ATK.puyoSplit(2, 1.1), ATK.rainNeedles(3, 0.14, 340), ATK.ring(14, 190, 3, 0.8), ATK.aimed(5, 0.7, 220, 0.15, 3), ATK.spiral(3, 0.1, 190, 0.4, 3), ATK.gravArc(3, 5), ATK.waveShots(3, 0.35, 200), ATK.mines(3), ATK.bouncers(3, 240, 2, 1)],
+    [ATK.rensa(4, 0.8), ATK.ojamaRain(3, 0.24), ATK.rainNeedles(4, 0.09, 380), ATK.curtain(260, 3, 1.2), ATK.homingBurst(6, 170, 2, 1.2), ATK.ring(20, 210, 3, 0.6), ATK.summon('ojama', 2), ATK.spiral(3, 0.08, 210, 0.6, 4), ATK.bouncers(4, 240, 2, 1), ATK.crossSpiral(3.5, 0.07, 200, 0.5), ATK.needleRows(5, 0.6, 420), ATK.movingCurtain(3.5, 260, 0.45)],
   ],
   [ // 7 ユキダルマプヨ：雪玉と吹雪
-    [ATK.snowballs(3, 3, 1), ATK.blizzard(3, 0.3, 300), ATK.rainNeedles(3, 0.12, 360), ATK.ring(16, 180, 3, 0.8), ATK.aimed(5, 0.6, 240, 0.15, 3), ATK.summon('ricochet', 2), ATK.waveShots(3, 0.3, 220), ATK.homingRing(8, 150, 2, 1.3)],
-    [ATK.snowballs(4, 5, 0.9), ATK.blizzard(4, 0.18, 340), ATK.spiral(3.5, 0.07, 230, 0.5, 3), ATK.movingCurtain(3.5, 280, 0.4), ATK.gravArc(4, 5, 0.8), ATK.summon('waver', 3), ATK.crossSpiral(3, 0.07, 220, 0.4), ATK.needleRows(5, 0.55, 440), ATK.mines(4), ATK.dash(760)],
+    [ATK.rensa(3, 0.9), ATK.puyoSplit(2, 1.1), ATK.snowballs(3, 3, 1), ATK.blizzard(3, 0.3, 300), ATK.rainNeedles(3, 0.12, 360), ATK.ring(16, 180, 3, 0.8), ATK.aimed(5, 0.6, 240, 0.15, 3), ATK.summon('ricochet', 2), ATK.waveShots(3, 0.3, 220), ATK.homingRing(8, 150, 2, 1.3)],
+    [ATK.rensa(4, 0.8), ATK.ojamaRain(3, 0.24), ATK.snowballs(4, 5, 0.9), ATK.blizzard(4, 0.18, 340), ATK.spiral(3.5, 0.07, 230, 0.5, 3), ATK.movingCurtain(3.5, 280, 0.4), ATK.gravArc(4, 5, 0.8), ATK.summon('waver', 3), ATK.crossSpiral(3, 0.07, 220, 0.4), ATK.needleRows(5, 0.55, 440), ATK.mines(4), ATK.dash(760)],
   ],
   [ // 8 テトロオーバーロード
-    [ATK.spiral(3.5, 0.07, 230, 0.3, 3), ATK.aimed(7, 0.6, 260, 0.14, 3), ATK.formation(), ATK.curtain(300, 3, 1.1), ATK.homingBurst(6, 190, 3, 1), ATK.minoDrop(3, 0.4), ATK.rotatingFan(3, 0.15, 250, 7), ATK.waveShots(3, 0.3, 220), ATK.bouncers(5, 250, 2, 0.9), ATK.gravArc(3, 5), ATK.geyser(3, 1.1)],
-    [ATK.dash(820), ATK.spiral(4, 0.06, 250, 0.55, 4), ATK.rainNeedles(3, 0.08, 420), ATK.ring(24, 220, 3, 0.55), ATK.curtain(320, 4, 1, 100), ATK.aimed(9, 0.5, 280, 0.12, 3), ATK.summon('dasher', 3), ATK.minoDrop(3, 0.25), ATK.formation(), ATK.crossSpiral(4, 0.06, 240, 0.45), ATK.movingCurtain(4, 320, 0.35), ATK.gravArc(4, 6, 0.7), ATK.needleRows(6, 0.5, 460), ATK.mines(5), ATK.snowballs(3, 5, 0.9), ATK.emberRain(3, 0.1), ATK.homingRing(12, 170, 2, 1.1)],
+    [ATK.rensa(3, 0.9), ATK.puyoSplit(2, 1.1), ATK.spiral(3.5, 0.07, 230, 0.3, 3), ATK.aimed(7, 0.6, 260, 0.14, 3), ATK.formation(), ATK.curtain(300, 3, 1.1), ATK.homingBurst(6, 190, 3, 1), ATK.minoDrop(3, 0.4), ATK.rotatingFan(3, 0.15, 250, 7), ATK.waveShots(3, 0.3, 220), ATK.bouncers(5, 250, 2, 0.9), ATK.gravArc(3, 5), ATK.geyser(3, 1.1)],
+    [ATK.rensa(4, 0.8), ATK.ojamaRain(3, 0.24), ATK.dash(820), ATK.spiral(4, 0.06, 250, 0.55, 4), ATK.rainNeedles(3, 0.08, 420), ATK.ring(24, 220, 3, 0.55), ATK.curtain(320, 4, 1, 100), ATK.aimed(9, 0.5, 280, 0.12, 3), ATK.summon('dasher', 3), ATK.minoDrop(3, 0.25), ATK.formation(), ATK.crossSpiral(4, 0.06, 240, 0.45), ATK.movingCurtain(4, 320, 0.35), ATK.gravArc(4, 6, 0.7), ATK.needleRows(6, 0.5, 460), ATK.mines(5), ATK.snowballs(3, 5, 0.9), ATK.emberRain(3, 0.1), ATK.homingRing(12, 170, 2, 1.1)],
   ],
 ];
 
@@ -2200,7 +2225,7 @@ class Player {
       this.x = clamp(nx, 24, W - 40); this.y = clamp(ny, 56, H - 24);
     }
     // 排気
-    if (Math.random() < 0.7) g.particles.add({ type: 'circle', x: this.x - 34, y: this.y + 2 + rand(-3, 3), vx: -160 + rand(-40, 40), vy: rand(-20, 20), size: rand(3, 6), color: pick(['#FFE3A0', '#FFB7C5', '#fff']), life: 0.35, shrink: true, alpha: 0.8 });
+    if (Math.random() < 0.6) g.particles.add({ type: 'cell', x: this.x - 52, y: this.y + rand(-3, 3), vx: -170 + rand(-40, 40), vy: rand(-20, 20), vr: rand(-6, 6), size: rand(3, 5), color: pick(Object.values(MINO_COLORS)), life: 0.35, shrink: true, alpha: 0.85 });
     // 射撃
     const w = this.weapon, lv = this.level;
     this.fireTimer -= dt;
@@ -2276,35 +2301,42 @@ class Player {
     if (this.inv > 0 && this.timers.invincible <= 0 && Math.floor(t * 20) % 2 === 0 && !this.entering) ctx.globalAlpha = 0.45;
     const tilt = clamp(this.vy / 600, -1, 1);
     ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(tilt * 0.22);
-    // プロペラ
-    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.ellipse(36, 0, 3, 22 * Math.abs(Math.sin(t * 38)) + 2, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#FF9FB6'; ctx.beginPath(); ctx.arc(34, 0, 4.5, 0, TAU); ctx.fill();
-    // 尾翼
-    ctx.fillStyle = '#FF8FB0'; ctx.beginPath(); ctx.moveTo(-20, -8); ctx.lineTo(-33, -27); ctx.lineTo(-38, -27); ctx.lineTo(-33, -4); ctx.closePath(); ctx.fill();
-    drawHeart(ctx, -31, -17, 3.2, '#fff');
-    ctx.fillStyle = '#FF8FB0'; roundRectPath(ctx, -38, -4, 16, 9, 4); ctx.fill();
-    // 上の翼
-    ctx.fillStyle = '#FF9FB6'; roundRectPath(ctx, -12, -24, 22, 9, 4); ctx.fill();
-    // 本体
-    ctx.fillStyle = '#FFF7EC'; roundRectPath(ctx, -32, -14, 66, 28, 14); ctx.fill();
-    ctx.strokeStyle = '#E8C2B0'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#FFB7C5'; roundRectPath(ctx, -28, 3, 56, 8, 4); ctx.fill();
-    // 下の翼
-    ctx.fillStyle = '#FF8FB0'; roundRectPath(ctx, -14, 6, 30, 12, 6); ctx.fill();
-    ctx.fillStyle = '#fff'; roundRectPath(ctx, -8, 9, 14, 3, 1.5); ctx.fill();
-    // 顔
-    const eyeShift = this.vx > 50 ? 1.5 : 0;
-    for (const ex of [10, 22]) {
-      if (this.blink) { ctx.strokeStyle = '#4A2A3A'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(ex - 4, -4); ctx.lineTo(ex + 4, -4); ctx.stroke(); continue; }
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, -4, 5.2, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#4A2A3A'; ctx.beginPath(); ctx.arc(ex + 1.2 + eyeShift, -3.5, 3.2, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex + 2.2 + eyeShift, -5, 1.2, 0, TAU); ctx.fill();
+    // ---- テトロミノを組み合わせた機体（1 マス = C ピクセル）----
+    const C = 9;
+    const cell = (cx, cy, col) => drawMino(ctx, cx * C, cy * C, SHAPES.M, C, col, 0);
+    // プロペラ（機首の前）
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.ellipse(3.15 * C, 0, 2.5, 20 * Math.abs(Math.sin(t * 38)) + 2, 0, 0, TAU); ctx.fill();
+    cell(2.6, 0, MINO_COLORS.M);
+    // 尾翼：S ミノ（緑）
+    for (const [cx, cy] of [[-4, -2], [-3, -2], [-4, -1]]) cell(cx, cy, MINO_COLORS.S);
+    // 上の翼：T ミノ（紫）
+    for (const [cx, cy] of [[-2, -2], [-1, -2], [0, -2], [-1, -1]]) cell(cx, cy, MINO_COLORS.T);
+    // 下の翼：L ミノ（オレンジ）
+    for (const [cx, cy] of [[-2, 1], [-1, 1], [0, 1], [0, 2]]) cell(cx, cy, MINO_COLORS.L);
+    // 胴体：I ミノ（水色）
+    for (let cx = -4; cx <= -1; cx++) cell(cx, 0, MINO_COLORS.I);
+    cell(0, -1, MINO_COLORS.J); cell(0, 0, MINO_COLORS.J); // 胴体のつなぎ：J ミノの色（青）
+    // 操縦席：O ミノ（黄色）に顔
+    for (const [cx, cy] of [[1, -1], [2, -1], [1, 0], [2, 0]]) cell(cx, cy, MINO_COLORS.O);
+    // 尾のライト：Z ミノの色（赤）
+    cell(-5, 0, MINO_COLORS.Z);
+    // 顔（O ミノの中心は (1.5C, -0.5C)）
+    const fx = 1.5 * C, fy = -0.5 * C, eyeShift = this.vx > 50 ? 1.2 : 0;
+    for (const ex of [fx - 4.5, fx + 4.5]) {
+      if (this.blink) { ctx.strokeStyle = '#4A2A3A'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(ex - 3, fy - 1); ctx.lineTo(ex + 3, fy - 1); ctx.stroke(); continue; }
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, fy - 1, 3.6, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#4A2A3A'; ctx.beginPath(); ctx.arc(ex + 0.9 + eyeShift, fy - 0.6, 2.2, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex + 1.6 + eyeShift, fy - 1.8, 0.9, 0, TAU); ctx.fill();
     }
-    ctx.strokeStyle = '#4A2A3A'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(16, 1, 3.5, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,110,150,0.45)'; ctx.beginPath(); ctx.ellipse(5, 2, 3.5, 2.2, 0, 0, TAU); ctx.ellipse(28, 2, 3.5, 2.2, 0, 0, TAU); ctx.fill();
-    // 武器カラーのマーク
-    drawMino(ctx, -14, -2, w.key === 'R' ? SHAPES.T : w.shape, 3.4, wcol, 0);
-    if (this.hurtFlash > 0) { ctx.globalAlpha = Math.min(1, this.hurtFlash * 3); ctx.fillStyle = '#fff'; roundRectPath(ctx, -32, -14, 66, 28, 14); ctx.fill(); }
+    ctx.strokeStyle = '#4A2A3A'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(fx, fy + 3.2, 2.6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,110,150,0.5)'; ctx.beginPath(); ctx.ellipse(fx - 7, fy + 3, 2.3, 1.5, 0, 0, TAU); ctx.ellipse(fx + 7, fy + 3, 2.3, 1.5, 0, 0, TAU); ctx.fill();
+    // 胴体に、いま使っている武器のマーク
+    drawMino(ctx, -2.5 * C, 0, w.key === 'R' ? SHAPES.T : w.shape, 2.6, '#ffffff', 0, 0.85);
+    // 被弾したときは機体全体を白く光らせる
+    if (this.hurtFlash > 0) {
+      ctx.globalAlpha = Math.min(1, this.hurtFlash * 3); ctx.fillStyle = '#fff';
+      for (const [cx, cy] of [[-4, -2], [-3, -2], [-4, -1], [-2, -2], [-1, -2], [0, -2], [-1, -1], [-2, 1], [-1, 1], [0, 1], [0, 2], [-4, 0], [-3, 0], [-2, 0], [-1, 0], [0, -1], [0, 0], [1, -1], [2, -1], [1, 0], [2, 0], [-5, 0]]) ctx.fillRect(cx * C - C / 2, cy * C - C / 2, C, C);
+    }
     ctx.restore();
     ctx.globalAlpha = 1;
     // ムテキのオーラ
@@ -2694,6 +2726,7 @@ class Game {
   drawPlay(ctx) {
     BG.draw(ctx, this, this.stageIndex);
     for (const it of this.items) it.draw(ctx);
+    this.drawPuyoLinks(ctx);
     for (const e of this.enemies) if (!e.isBoss) e.draw(ctx, this);
     for (const e of this.enemies) if (e.isBoss) e.draw(ctx, this);
     for (const b of this.bullets) b.draw(ctx);
@@ -2713,6 +2746,21 @@ class Game {
     if (this.chainCount > 1 && this.chainShowT > 0) this.drawChain(ctx);
     if (this.phase === 'warning' && this.state === 'play') this.drawWarning(ctx);
     if (this.paused) { ctx.fillStyle = 'rgba(10,0,30,0.55)'; ctx.fillRect(0, 0, W, H); drawText(ctx, 'PAUSE', W / 2, H / 2 - 20, 56, '#fff', 'center', { outline: '#5A2A9A' }); drawText(ctx, 'P / ESC でさいかい', W / 2, H / 2 + 36, 20, '#fff'); }
+  }
+  // ぷよぷよのように、となりあう同じ色の敵を太い帯でつなげて見せる（れんさする組み合わせが分かる）
+  drawPuyoLinks(ctx) {
+    const list = this.enemies.filter((e) => !e.dead && !e.isBoss && e.color >= 0 && e.color <= 4 && !e.drawAs && e.type !== 'carrier' && e.type !== 'turret');
+    ctx.save(); ctx.lineCap = 'round';
+    for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+      const a = list[i], b = list[j];
+      if (a.color !== b.color) continue;
+      const d = dist(a.x, a.y, b.x, b.y), lim = (a.r + b.r) * 1.2 + 6;
+      if (d > lim) continue;
+      const col = puyoColor(a.color, this.time), w = Math.min(a.r, b.r) * (1.25 - 0.45 * d / lim);
+      ctx.strokeStyle = col.dark; ctx.lineWidth = w + 3; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      ctx.strokeStyle = col.main; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
+    ctx.restore();
   }
   drawHUD(ctx) {
     const p = this.player, st = STAGES[this.stageIndex];

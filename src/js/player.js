@@ -94,7 +94,7 @@ class Player {
       this.x = clamp(nx, 24, W - 40); this.y = clamp(ny, 56, H - 24);
     }
     // 排気
-    if (Math.random() < 0.7) g.particles.add({ type: 'circle', x: this.x - 34, y: this.y + 2 + rand(-3, 3), vx: -160 + rand(-40, 40), vy: rand(-20, 20), size: rand(3, 6), color: pick(['#FFE3A0', '#FFB7C5', '#fff']), life: 0.35, shrink: true, alpha: 0.8 });
+    if (Math.random() < 0.6) g.particles.add({ type: 'cell', x: this.x - 52, y: this.y + rand(-3, 3), vx: -170 + rand(-40, 40), vy: rand(-20, 20), vr: rand(-6, 6), size: rand(3, 5), color: pick(Object.values(MINO_COLORS)), life: 0.35, shrink: true, alpha: 0.85 });
     // 射撃
     const w = this.weapon, lv = this.level;
     this.fireTimer -= dt;
@@ -170,35 +170,42 @@ class Player {
     if (this.inv > 0 && this.timers.invincible <= 0 && Math.floor(t * 20) % 2 === 0 && !this.entering) ctx.globalAlpha = 0.45;
     const tilt = clamp(this.vy / 600, -1, 1);
     ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(tilt * 0.22);
-    // プロペラ
-    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.beginPath(); ctx.ellipse(36, 0, 3, 22 * Math.abs(Math.sin(t * 38)) + 2, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#FF9FB6'; ctx.beginPath(); ctx.arc(34, 0, 4.5, 0, TAU); ctx.fill();
-    // 尾翼
-    ctx.fillStyle = '#FF8FB0'; ctx.beginPath(); ctx.moveTo(-20, -8); ctx.lineTo(-33, -27); ctx.lineTo(-38, -27); ctx.lineTo(-33, -4); ctx.closePath(); ctx.fill();
-    drawHeart(ctx, -31, -17, 3.2, '#fff');
-    ctx.fillStyle = '#FF8FB0'; roundRectPath(ctx, -38, -4, 16, 9, 4); ctx.fill();
-    // 上の翼
-    ctx.fillStyle = '#FF9FB6'; roundRectPath(ctx, -12, -24, 22, 9, 4); ctx.fill();
-    // 本体
-    ctx.fillStyle = '#FFF7EC'; roundRectPath(ctx, -32, -14, 66, 28, 14); ctx.fill();
-    ctx.strokeStyle = '#E8C2B0'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#FFB7C5'; roundRectPath(ctx, -28, 3, 56, 8, 4); ctx.fill();
-    // 下の翼
-    ctx.fillStyle = '#FF8FB0'; roundRectPath(ctx, -14, 6, 30, 12, 6); ctx.fill();
-    ctx.fillStyle = '#fff'; roundRectPath(ctx, -8, 9, 14, 3, 1.5); ctx.fill();
-    // 顔
-    const eyeShift = this.vx > 50 ? 1.5 : 0;
-    for (const ex of [10, 22]) {
-      if (this.blink) { ctx.strokeStyle = '#4A2A3A'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(ex - 4, -4); ctx.lineTo(ex + 4, -4); ctx.stroke(); continue; }
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, -4, 5.2, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#4A2A3A'; ctx.beginPath(); ctx.arc(ex + 1.2 + eyeShift, -3.5, 3.2, 0, TAU); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex + 2.2 + eyeShift, -5, 1.2, 0, TAU); ctx.fill();
+    // ---- テトロミノを組み合わせた機体（1 マス = C ピクセル）----
+    const C = 9;
+    const cell = (cx, cy, col) => drawMino(ctx, cx * C, cy * C, SHAPES.M, C, col, 0);
+    // プロペラ（機首の前）
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.beginPath(); ctx.ellipse(3.15 * C, 0, 2.5, 20 * Math.abs(Math.sin(t * 38)) + 2, 0, 0, TAU); ctx.fill();
+    cell(2.6, 0, MINO_COLORS.M);
+    // 尾翼：S ミノ（緑）
+    for (const [cx, cy] of [[-4, -2], [-3, -2], [-4, -1]]) cell(cx, cy, MINO_COLORS.S);
+    // 上の翼：T ミノ（紫）
+    for (const [cx, cy] of [[-2, -2], [-1, -2], [0, -2], [-1, -1]]) cell(cx, cy, MINO_COLORS.T);
+    // 下の翼：L ミノ（オレンジ）
+    for (const [cx, cy] of [[-2, 1], [-1, 1], [0, 1], [0, 2]]) cell(cx, cy, MINO_COLORS.L);
+    // 胴体：I ミノ（水色）
+    for (let cx = -4; cx <= -1; cx++) cell(cx, 0, MINO_COLORS.I);
+    cell(0, -1, MINO_COLORS.J); cell(0, 0, MINO_COLORS.J); // 胴体のつなぎ：J ミノの色（青）
+    // 操縦席：O ミノ（黄色）に顔
+    for (const [cx, cy] of [[1, -1], [2, -1], [1, 0], [2, 0]]) cell(cx, cy, MINO_COLORS.O);
+    // 尾のライト：Z ミノの色（赤）
+    cell(-5, 0, MINO_COLORS.Z);
+    // 顔（O ミノの中心は (1.5C, -0.5C)）
+    const fx = 1.5 * C, fy = -0.5 * C, eyeShift = this.vx > 50 ? 1.2 : 0;
+    for (const ex of [fx - 4.5, fx + 4.5]) {
+      if (this.blink) { ctx.strokeStyle = '#4A2A3A'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(ex - 3, fy - 1); ctx.lineTo(ex + 3, fy - 1); ctx.stroke(); continue; }
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, fy - 1, 3.6, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#4A2A3A'; ctx.beginPath(); ctx.arc(ex + 0.9 + eyeShift, fy - 0.6, 2.2, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex + 1.6 + eyeShift, fy - 1.8, 0.9, 0, TAU); ctx.fill();
     }
-    ctx.strokeStyle = '#4A2A3A'; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.arc(16, 1, 3.5, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,110,150,0.45)'; ctx.beginPath(); ctx.ellipse(5, 2, 3.5, 2.2, 0, 0, TAU); ctx.ellipse(28, 2, 3.5, 2.2, 0, 0, TAU); ctx.fill();
-    // 武器カラーのマーク
-    drawMino(ctx, -14, -2, w.key === 'R' ? SHAPES.T : w.shape, 3.4, wcol, 0);
-    if (this.hurtFlash > 0) { ctx.globalAlpha = Math.min(1, this.hurtFlash * 3); ctx.fillStyle = '#fff'; roundRectPath(ctx, -32, -14, 66, 28, 14); ctx.fill(); }
+    ctx.strokeStyle = '#4A2A3A'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(fx, fy + 3.2, 2.6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,110,150,0.5)'; ctx.beginPath(); ctx.ellipse(fx - 7, fy + 3, 2.3, 1.5, 0, 0, TAU); ctx.ellipse(fx + 7, fy + 3, 2.3, 1.5, 0, 0, TAU); ctx.fill();
+    // 胴体に、いま使っている武器のマーク
+    drawMino(ctx, -2.5 * C, 0, w.key === 'R' ? SHAPES.T : w.shape, 2.6, '#ffffff', 0, 0.85);
+    // 被弾したときは機体全体を白く光らせる
+    if (this.hurtFlash > 0) {
+      ctx.globalAlpha = Math.min(1, this.hurtFlash * 3); ctx.fillStyle = '#fff';
+      for (const [cx, cy] of [[-4, -2], [-3, -2], [-4, -1], [-2, -2], [-1, -2], [0, -2], [-1, -1], [-2, 1], [-1, 1], [0, 1], [0, 2], [-4, 0], [-3, 0], [-2, 0], [-1, 0], [0, -1], [0, 0], [1, -1], [2, -1], [1, 0], [2, 0], [-5, 0]]) ctx.fillRect(cx * C - C / 2, cy * C - C / 2, C, C);
+    }
     ctx.restore();
     ctx.globalAlpha = 1;
     // ムテキのオーラ
