@@ -376,6 +376,7 @@ class Game {
   drawPlay(ctx) {
     BG.draw(ctx, this, this.stageIndex);
     for (const it of this.items) it.draw(ctx);
+    this.drawPuyoLinks(ctx);
     for (const e of this.enemies) if (!e.isBoss) e.draw(ctx, this);
     for (const e of this.enemies) if (e.isBoss) e.draw(ctx, this);
     for (const b of this.bullets) b.draw(ctx);
@@ -395,6 +396,21 @@ class Game {
     if (this.chainCount > 1 && this.chainShowT > 0) this.drawChain(ctx);
     if (this.phase === 'warning' && this.state === 'play') this.drawWarning(ctx);
     if (this.paused) { ctx.fillStyle = 'rgba(10,0,30,0.55)'; ctx.fillRect(0, 0, W, H); drawText(ctx, 'PAUSE', W / 2, H / 2 - 20, 56, '#fff', 'center', { outline: '#5A2A9A' }); drawText(ctx, 'P / ESC でさいかい', W / 2, H / 2 + 36, 20, '#fff'); }
+  }
+  // ぷよぷよのように、となりあう同じ色の敵を太い帯でつなげて見せる（れんさする組み合わせが分かる）
+  drawPuyoLinks(ctx) {
+    const list = this.enemies.filter((e) => !e.dead && !e.isBoss && e.color >= 0 && e.color <= 4 && !e.drawAs && e.type !== 'carrier' && e.type !== 'turret');
+    ctx.save(); ctx.lineCap = 'round';
+    for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+      const a = list[i], b = list[j];
+      if (a.color !== b.color) continue;
+      const d = dist(a.x, a.y, b.x, b.y), lim = (a.r + b.r) * 1.2 + 6;
+      if (d > lim) continue;
+      const col = puyoColor(a.color, this.time), w = Math.min(a.r, b.r) * (1.25 - 0.45 * d / lim);
+      ctx.strokeStyle = col.dark; ctx.lineWidth = w + 3; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      ctx.strokeStyle = col.main; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
+    ctx.restore();
   }
   drawHUD(ctx) {
     const p = this.player, st = STAGES[this.stageIndex];

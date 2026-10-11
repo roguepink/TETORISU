@@ -71,41 +71,56 @@ const ATK = {
   geyser: (times = 3, interval = 1.1) => ({ dur: times * interval + 0.8, start(b) { b.acc = interval * 0.5; b.cnt = 0; }, tick(b, dt, g) { b.acc += dt; if (b.acc >= interval && b.cnt < times) { b.acc -= interval; b.cnt++; const x = g.player.x + rand(-60, 140); for (let i = 0; i < 9; i++) g.addEBullet(new EBullet(x + rand(-8, 8), H + 20 + i * 26, 0, -(380 + i * 10) * g.diff.bspeed, { color: b.color, kind: 'needle', life: 4 })); g.texts.add(x, H - 30, '！', '#FFB347', 26, { pop: true, life: 0.6 }); Sound.sfx.enemyShot(); } } }),
   snowballs: (times = 3, n = 3, interval = 1) => ({ dur: times * interval + 0.8, start(b) { b.acc = interval * 0.5; b.cnt = 0; }, tick(b, dt, g) { b.acc += dt; if (b.acc >= interval && b.cnt < times) { b.acc -= interval; b.cnt++; const base = Math.atan2(g.player.y - b.y, g.player.x - b.x); for (let i = 0; i < n; i++) b.shoot(g, base + (i - (n - 1) / 2) * 0.3, 150, { kind: 'big', r: 16, accel: 60, life: 6 }); Sound.sfx.enemyShot(); b.squash = 0.35; } } }),
   blizzard: (dur = 3, rate = 0.3, speed = 300) => ({ dur, start(b) { b.acc = 0; }, tick(b, dt, g) { b.acc += dt; while (b.acc >= rate) { b.acc -= rate; const y = rand(60, H - 20); g.addEBullet(new EBullet(W + 20, y, -speed * g.diff.bspeed, 0, { color: b.color, kind: 'needle', amp: rand(20, 50), freq: 5, life: 5 })); } } }),
+  // れんさ攻撃：1 れんさ、2 れんさ…と だんだん大きくなる
+  rensa: (maxChain = 3, interval = 0.85) => ({ dur: maxChain * interval + 0.8, start(b) { b.acc = interval * 0.6; b.cnt = 0; }, tick(b, dt, g) {
+    b.acc += dt;
+    if (b.acc >= interval && b.cnt < maxChain) {
+      b.acc -= interval; b.cnt++; const k = b.cnt;
+      g.texts.add(b.x, b.y - b.r - 24, `${k}れんさ！`, k >= 3 ? '#FFE066' : '#fff', 20 + k * 4, { pop: true, life: 0.8 });
+      Sound.sfx.chainText(k); b.squash = 0.35;
+      if (k < maxChain) b.shootRing(g, 6 + k * 2, 140 + k * 15, b.t + k * 0.4);
+      else for (let i = -1; i <= 1; i++) b.shootAimed(g, 160, 1, 0, { r: 13, splitT: 0.8 + i * 0.1 + 0.1, splitN: 6, color: b.color });
+    }
+  } }),
+  // おじゃまぷよが 空から ふってくる
+  ojamaRain: (dur = 3, rate = 0.22) => ({ dur, start(b, g) { b.acc = 0; g.texts.add(W / 2, 90, 'おじゃまぷよ！', '#C8CCD8', 22, { pop: true, life: 1 }); }, tick(b, dt, g) { b.acc += dt; while (b.acc >= rate) { b.acc -= rate; g.addEBullet(new EBullet(rand(200, W - 40), -16, rand(-60, -10), 40 * g.diff.bspeed, { color: -1, r: 9, grav: 360, bounces: 1, life: 6 })); } } }),
+  // はじけるぷよ弾
+  puyoSplit: (times = 3, interval = 1) => ({ dur: times * interval + 0.8, start(b) { b.acc = interval * 0.5; b.cnt = 0; }, tick(b, dt, g) { b.acc += dt; if (b.acc >= interval && b.cnt < times) { b.acc -= interval; b.cnt++; b.shootAimed(g, 170, 1, 0, { r: 13, splitT: 0.85, splitN: 6 }); b.squash = 0.3; } } }),
   minoDrop: (dur = 3, rate = 0.35) => ({ dur, start(b) { b.acc = 0; }, tick(b, dt, g) { b.acc += dt; while (b.acc >= rate) { b.acc -= rate; g.addEBullet(new EBullet(rand(100, W - 60), -20, -40, 120 * g.diff.bspeed, { color: b.color, kind: 'big', accel: 260, life: 6 })); } } }),
 };
 
 const BOSS_ATTACKS = [
   [ // 1 プヨキング
-    [ATK.aimed(1, 0.55, 220, 0, 3), ATK.bounce(4, 300, 3), ATK.summon('drift', 4, { sameColor: true, spread: true }), ATK.ring(10, 170, 2, 1), ATK.gravArc(2, 3), ATK.waveShots(2.5, 0.5, 200)],
-    [ATK.aimed(3, 0.5, 250, 0.25, 3), ATK.dash(680), ATK.ring(14, 190, 3, 0.7), ATK.bounce(4, 400, 5), ATK.formation(), ATK.bouncers(3, 230, 2, 1), ATK.rotatingFan(3, 0.25, 200, 3), ATK.gravArc(3, 4)],
+    [ATK.rensa(3, 0.9), ATK.puyoSplit(2, 1.1), ATK.aimed(1, 0.55, 220, 0, 3), ATK.bounce(4, 300, 3), ATK.summon('drift', 4, { sameColor: true, spread: true }), ATK.ring(10, 170, 2, 1), ATK.gravArc(2, 3), ATK.waveShots(2.5, 0.5, 200)],
+    [ATK.rensa(4, 0.8), ATK.ojamaRain(3, 0.24), ATK.aimed(3, 0.5, 250, 0.25, 3), ATK.dash(680), ATK.ring(14, 190, 3, 0.7), ATK.bounce(4, 400, 5), ATK.formation(), ATK.bouncers(3, 230, 2, 1), ATK.rotatingFan(3, 0.25, 200, 3), ATK.gravArc(3, 4)],
   ],
   [ // 2 プヨクラゲ
-    [ATK.ring(12, 180, 3, 0.9), ATK.aimed(5, 0.8, 200, 0.18, 3), ATK.homingBurst(4, 160, 2, 1.2), ATK.summon('bouncer', 3, { sameColor: true }), ATK.waveShots(3, 0.4, 210), ATK.gravArc(3, 4), ATK.bouncers(3, 220, 2, 1)],
-    [ATK.spiral(3, 0.09, 200, 0.35, 2), ATK.ring(16, 200, 3, 0.7), ATK.curtain(240, 3, 1.4), ATK.summon('bouncer', 4), ATK.homingBurst(6, 170, 2, 1), ATK.crossSpiral(3, 0.1, 190, 0.3), ATK.movingCurtain(3.5, 230, 0.5), ATK.mines(4)],
+    [ATK.rensa(3, 0.9), ATK.puyoSplit(2, 1.1), ATK.ring(12, 180, 3, 0.9), ATK.aimed(5, 0.8, 200, 0.18, 3), ATK.homingBurst(4, 160, 2, 1.2), ATK.summon('bouncer', 3, { sameColor: true }), ATK.waveShots(3, 0.4, 210), ATK.gravArc(3, 4), ATK.bouncers(3, 220, 2, 1)],
+    [ATK.rensa(4, 0.8), ATK.ojamaRain(3, 0.24), ATK.spiral(3, 0.09, 200, 0.35, 2), ATK.ring(16, 200, 3, 0.7), ATK.curtain(240, 3, 1.4), ATK.summon('bouncer', 4), ATK.homingBurst(6, 170, 2, 1), ATK.crossSpiral(3, 0.1, 190, 0.3), ATK.movingCurtain(3.5, 230, 0.5), ATK.mines(4)],
   ],
   [ // 3 キツネプヨ：狐火と素早い動き
-    [ATK.homingRing(8, 140, 2, 1.4), ATK.aimed(3, 0.45, 260, 0.22, 3), ATK.dash(720), ATK.waveShots(3, 0.4, 220), ATK.summon('looper', 3), ATK.rotatingFan(3, 0.22, 220, 5)],
-    [ATK.homingRing(12, 160, 2, 1.2), ATK.dash(800), ATK.spiral(3, 0.09, 210, 0.45, 2), ATK.bouncers(4, 240, 2, 0.9), ATK.summon('diver', 3), ATK.crossSpiral(3, 0.09, 200, 0.35), ATK.needleRows(4, 0.6, 400), ATK.mines(3)],
+    [ATK.rensa(3, 0.9), ATK.puyoSplit(2, 1.1), ATK.homingRing(8, 140, 2, 1.4), ATK.aimed(3, 0.45, 260, 0.22, 3), ATK.dash(720), ATK.waveShots(3, 0.4, 220), ATK.summon('looper', 3), ATK.rotatingFan(3, 0.22, 220, 5)],
+    [ATK.rensa(4, 0.8), ATK.ojamaRain(3, 0.24), ATK.homingRing(12, 160, 2, 1.2), ATK.dash(800), ATK.spiral(3, 0.09, 210, 0.45, 2), ATK.bouncers(4, 240, 2, 0.9), ATK.summon('diver', 3), ATK.crossSpiral(3, 0.09, 200, 0.35), ATK.needleRows(4, 0.6, 400), ATK.mines(3)],
   ],
   [ // 4 ネオンツインズ
-    [ATK.aimed(1, 0.3, 300, 0, 3), ATK.sweep(2.6), ATK.curtain(300, 2, 1.5, 120), ATK.dash(760), ATK.needleRows(4, 0.7, 380), ATK.bouncers(2, 260, 2, 0.9), ATK.waveShots(2.5, 0.35, 240)],
-    [ATK.spiral(3, 0.08, 230, 0.5, 1), ATK.aimed(3, 0.35, 320, 0.2, 3), ATK.sweep(3, 0.04), ATK.summon('homer', 3), ATK.dash(820), ATK.rotatingFan(3, 0.18, 260, 5), ATK.crossSpiral(3, 0.08, 220, 0.4), ATK.movingCurtain(3, 300, 0.4), ATK.needleRows(5, 0.55, 420)],
+    [ATK.rensa(3, 0.9), ATK.puyoSplit(2, 1.1), ATK.aimed(1, 0.3, 300, 0, 3), ATK.sweep(2.6), ATK.curtain(300, 2, 1.5, 120), ATK.dash(760), ATK.needleRows(4, 0.7, 380), ATK.bouncers(2, 260, 2, 0.9), ATK.waveShots(2.5, 0.35, 240)],
+    [ATK.rensa(4, 0.8), ATK.ojamaRain(3, 0.24), ATK.spiral(3, 0.08, 230, 0.5, 1), ATK.aimed(3, 0.35, 320, 0.2, 3), ATK.sweep(3, 0.04), ATK.summon('homer', 3), ATK.dash(820), ATK.rotatingFan(3, 0.18, 260, 5), ATK.crossSpiral(3, 0.08, 220, 0.4), ATK.movingCurtain(3, 300, 0.4), ATK.needleRows(5, 0.55, 420)],
   ],
   [ // 5 マグマプヨ：火山弾と間欠泉
-    [ATK.emberRain(3, 0.14), ATK.geyser(3, 1.2), ATK.aimed(5, 0.7, 230, 0.16, 3), ATK.ring(14, 180, 3, 0.8), ATK.gravArc(3, 5), ATK.summon('bomber', 3), ATK.rotatingFan(3, 0.2, 230, 5)],
-    [ATK.emberRain(4, 0.09), ATK.geyser(4, 0.9), ATK.spiral(3, 0.08, 220, 0.5, 3), ATK.curtain(270, 3, 1.2), ATK.homingBurst(5, 170, 2, 1.1), ATK.mines(4), ATK.crossSpiral(3, 0.08, 210, 0.45), ATK.bouncers(4, 250, 2, 1), ATK.summon('dasher', 3)],
+    [ATK.rensa(3, 0.9), ATK.puyoSplit(2, 1.1), ATK.emberRain(3, 0.14), ATK.geyser(3, 1.2), ATK.aimed(5, 0.7, 230, 0.16, 3), ATK.ring(14, 180, 3, 0.8), ATK.gravArc(3, 5), ATK.summon('bomber', 3), ATK.rotatingFan(3, 0.2, 230, 5)],
+    [ATK.rensa(4, 0.8), ATK.ojamaRain(3, 0.24), ATK.emberRain(4, 0.09), ATK.geyser(4, 0.9), ATK.spiral(3, 0.08, 220, 0.5, 3), ATK.curtain(270, 3, 1.2), ATK.homingBurst(5, 170, 2, 1.1), ATK.mines(4), ATK.crossSpiral(3, 0.08, 210, 0.45), ATK.bouncers(4, 250, 2, 1), ATK.summon('dasher', 3)],
   ],
   [ // 6 クリスタルプヨ
-    [ATK.rainNeedles(3, 0.14, 340), ATK.ring(14, 190, 3, 0.8), ATK.aimed(5, 0.7, 220, 0.15, 3), ATK.spiral(3, 0.1, 190, 0.4, 3), ATK.gravArc(3, 5), ATK.waveShots(3, 0.35, 200), ATK.mines(3), ATK.bouncers(3, 240, 2, 1)],
-    [ATK.rainNeedles(4, 0.09, 380), ATK.curtain(260, 3, 1.2), ATK.homingBurst(6, 170, 2, 1.2), ATK.ring(20, 210, 3, 0.6), ATK.summon('ojama', 2), ATK.spiral(3, 0.08, 210, 0.6, 4), ATK.bouncers(4, 240, 2, 1), ATK.crossSpiral(3.5, 0.07, 200, 0.5), ATK.needleRows(5, 0.6, 420), ATK.movingCurtain(3.5, 260, 0.45)],
+    [ATK.rensa(3, 0.9), ATK.puyoSplit(2, 1.1), ATK.rainNeedles(3, 0.14, 340), ATK.ring(14, 190, 3, 0.8), ATK.aimed(5, 0.7, 220, 0.15, 3), ATK.spiral(3, 0.1, 190, 0.4, 3), ATK.gravArc(3, 5), ATK.waveShots(3, 0.35, 200), ATK.mines(3), ATK.bouncers(3, 240, 2, 1)],
+    [ATK.rensa(4, 0.8), ATK.ojamaRain(3, 0.24), ATK.rainNeedles(4, 0.09, 380), ATK.curtain(260, 3, 1.2), ATK.homingBurst(6, 170, 2, 1.2), ATK.ring(20, 210, 3, 0.6), ATK.summon('ojama', 2), ATK.spiral(3, 0.08, 210, 0.6, 4), ATK.bouncers(4, 240, 2, 1), ATK.crossSpiral(3.5, 0.07, 200, 0.5), ATK.needleRows(5, 0.6, 420), ATK.movingCurtain(3.5, 260, 0.45)],
   ],
   [ // 7 ユキダルマプヨ：雪玉と吹雪
-    [ATK.snowballs(3, 3, 1), ATK.blizzard(3, 0.3, 300), ATK.rainNeedles(3, 0.12, 360), ATK.ring(16, 180, 3, 0.8), ATK.aimed(5, 0.6, 240, 0.15, 3), ATK.summon('ricochet', 2), ATK.waveShots(3, 0.3, 220), ATK.homingRing(8, 150, 2, 1.3)],
-    [ATK.snowballs(4, 5, 0.9), ATK.blizzard(4, 0.18, 340), ATK.spiral(3.5, 0.07, 230, 0.5, 3), ATK.movingCurtain(3.5, 280, 0.4), ATK.gravArc(4, 5, 0.8), ATK.summon('waver', 3), ATK.crossSpiral(3, 0.07, 220, 0.4), ATK.needleRows(5, 0.55, 440), ATK.mines(4), ATK.dash(760)],
+    [ATK.rensa(3, 0.9), ATK.puyoSplit(2, 1.1), ATK.snowballs(3, 3, 1), ATK.blizzard(3, 0.3, 300), ATK.rainNeedles(3, 0.12, 360), ATK.ring(16, 180, 3, 0.8), ATK.aimed(5, 0.6, 240, 0.15, 3), ATK.summon('ricochet', 2), ATK.waveShots(3, 0.3, 220), ATK.homingRing(8, 150, 2, 1.3)],
+    [ATK.rensa(4, 0.8), ATK.ojamaRain(3, 0.24), ATK.snowballs(4, 5, 0.9), ATK.blizzard(4, 0.18, 340), ATK.spiral(3.5, 0.07, 230, 0.5, 3), ATK.movingCurtain(3.5, 280, 0.4), ATK.gravArc(4, 5, 0.8), ATK.summon('waver', 3), ATK.crossSpiral(3, 0.07, 220, 0.4), ATK.needleRows(5, 0.55, 440), ATK.mines(4), ATK.dash(760)],
   ],
   [ // 8 テトロオーバーロード
-    [ATK.spiral(3.5, 0.07, 230, 0.3, 3), ATK.aimed(7, 0.6, 260, 0.14, 3), ATK.formation(), ATK.curtain(300, 3, 1.1), ATK.homingBurst(6, 190, 3, 1), ATK.minoDrop(3, 0.4), ATK.rotatingFan(3, 0.15, 250, 7), ATK.waveShots(3, 0.3, 220), ATK.bouncers(5, 250, 2, 0.9), ATK.gravArc(3, 5), ATK.geyser(3, 1.1)],
-    [ATK.dash(820), ATK.spiral(4, 0.06, 250, 0.55, 4), ATK.rainNeedles(3, 0.08, 420), ATK.ring(24, 220, 3, 0.55), ATK.curtain(320, 4, 1, 100), ATK.aimed(9, 0.5, 280, 0.12, 3), ATK.summon('dasher', 3), ATK.minoDrop(3, 0.25), ATK.formation(), ATK.crossSpiral(4, 0.06, 240, 0.45), ATK.movingCurtain(4, 320, 0.35), ATK.gravArc(4, 6, 0.7), ATK.needleRows(6, 0.5, 460), ATK.mines(5), ATK.snowballs(3, 5, 0.9), ATK.emberRain(3, 0.1), ATK.homingRing(12, 170, 2, 1.1)],
+    [ATK.rensa(3, 0.9), ATK.puyoSplit(2, 1.1), ATK.spiral(3.5, 0.07, 230, 0.3, 3), ATK.aimed(7, 0.6, 260, 0.14, 3), ATK.formation(), ATK.curtain(300, 3, 1.1), ATK.homingBurst(6, 190, 3, 1), ATK.minoDrop(3, 0.4), ATK.rotatingFan(3, 0.15, 250, 7), ATK.waveShots(3, 0.3, 220), ATK.bouncers(5, 250, 2, 0.9), ATK.gravArc(3, 5), ATK.geyser(3, 1.1)],
+    [ATK.rensa(4, 0.8), ATK.ojamaRain(3, 0.24), ATK.dash(820), ATK.spiral(4, 0.06, 250, 0.55, 4), ATK.rainNeedles(3, 0.08, 420), ATK.ring(24, 220, 3, 0.55), ATK.curtain(320, 4, 1, 100), ATK.aimed(9, 0.5, 280, 0.12, 3), ATK.summon('dasher', 3), ATK.minoDrop(3, 0.25), ATK.formation(), ATK.crossSpiral(4, 0.06, 240, 0.45), ATK.movingCurtain(4, 320, 0.35), ATK.gravArc(4, 6, 0.7), ATK.needleRows(6, 0.5, 460), ATK.mines(5), ATK.snowballs(3, 5, 0.9), ATK.emberRain(3, 0.1), ATK.homingRing(12, 170, 2, 1.1)],
   ],
 ];
 
