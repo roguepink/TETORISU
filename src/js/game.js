@@ -6,8 +6,8 @@ const DIFFS = [
   { name: 'むずかしい', hp: 1.5, bspeed: 1.3, fire: 1.55, lives: 2, bombs: 2, color: '#FF5E7A' },
 ];
 const PLAYER_DMG_SCALE = 1.0; // 自機の全弾ダメージ係数（武器ごとの数値で調整済み）
-const ENEMY_FIRE_SCALE = 0.6; // 通常の敵が撃つ回数の係数（弾が多すぎたので 4 割減）
-const BOSS_FIRE_SCALE = 0.8; // ボスの弾の係数（2 割減）
+const ENEMY_FIRE_SCALE = 0.52; // 通常の敵が撃つ回数の係数（元の約半分）
+const BOSS_FIRE_SCALE = 0.72; // ボスの弾の係数（元の約 7 割）
 const ENEMY_HP_SCALE = 1.9; // 通常の敵の HP 係数（元の 1.25 の 1.5 倍）
 // タイトル画面のボタン配置
 const TITLE_UI = { diffY: 308, diffGap: 40, diffW: 300, diffH: 34, stageY: 448, startY: 488, startW: 340, startH: 44 };
