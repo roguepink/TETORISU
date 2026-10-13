@@ -3,6 +3,7 @@
 const Sound = (() => {
   let ctx = null, master = null, sfxBus = null, bgmBus = null, noiseBuf = null;
   let muted = false;
+  let away = false, held = false; // away: 画面が見えていない（アプリ切替・戻るボタンなど） / held: ポーズ中
   let lastShoot = 0, lastPop = 0;
 
   function ensure() {
@@ -20,7 +21,19 @@ const Sound = (() => {
     } catch (e) { return false; }
     return true;
   }
-  function resume() { if (ctx && ctx.state === 'suspended') ctx.resume(); }
+  // 画面に戻ってきた・ポーズを解いたときだけ鳴らし直す。見えていない間やポーズ中は、タップやキーでも鳴らさない
+  function resume() {
+    if (!ctx || away || held) return;
+    if (ctx.state !== 'running') { try { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* 無視 */ } }
+    if (bgm.song && !bgm.timer) startTimer();
+  }
+  // 音をまるごと止める（BGM の曲は覚えておき、resume で続きから鳴らす）
+  function halt() {
+    if (bgm.timer) clearInterval(bgm.timer); bgm.timer = null;
+    if (ctx && ctx.state === 'running') { try { const p = ctx.suspend(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* 無視 */ } }
+  }
+  function setAway(v) { away = v; if (v) halt(); else resume(); }
+  function hold(v) { held = v; if (v) halt(); else resume(); }
   function now() { return ctx ? ctx.currentTime : 0; }
 
   function tone(o) {
@@ -191,6 +204,7 @@ const Sound = (() => {
   function schedule() {
     if (!bgm.song || !ctx) return;
     const song = bgm.song, pat = bgm.pattern, stepDur = 60 / song.bpm / 4;
+    if (bgm.nextTime < ctx.currentTime) bgm.nextTime = ctx.currentTime + 0.02; // タイマーが遅れたら、たまった音符をまとめて鳴らさず今から続ける
     while (bgm.nextTime < ctx.currentTime + 0.15) {
       const s = bgm.step % pat.steps, t = bgm.nextTime;
       if (!muted) {
@@ -217,10 +231,14 @@ const Sound = (() => {
     if (!song) return;
     bgm.song = song; bgm.pattern = buildPattern(song); bgm.step = 0; bgm.key = key;
     bgm.nextTime = ctx.currentTime + 0.05;
+    if (!away && !held) startTimer();
+  }
+  function startTimer() {
+    bgm.nextTime = Math.max(bgm.nextTime, ctx.currentTime + 0.05);
     bgm.timer = setInterval(schedule, 40);
   }
   function stop() { if (bgm.timer) clearInterval(bgm.timer); bgm.timer = null; bgm.song = null; bgm.key = ''; }
   function toggleMute() { muted = !muted; if (master) master.gain.value = muted ? 0 : 0.55; return muted; }
   function isMuted() { return muted; }
-  return { ensure, resume, sfx, play, stop, toggleMute, isMuted, now };
+  return { ensure, resume, sfx, play, stop, toggleMute, isMuted, now, setAway, hold };
 })();
