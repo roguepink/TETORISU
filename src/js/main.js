@@ -47,6 +47,11 @@ window.addEventListener('load', () => {
   } else fsBtn.classList.add('hidden');
   const unlock = () => { if (Sound.ensure()) { Sound.resume(); if (game.state === 'title') Sound.play('title'); } };
   window.addEventListener('keydown', unlock); window.addEventListener('pointerdown', unlock);
+  // 画面を離れたら（ホームに戻る・アプリ切替・タブ切替・戻るボタン・別のページへ）音を止め、遊んでいる途中ならポーズにする
+  const goAway = () => { game.pauseForAway(); Sound.setAway(true); };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) goAway(); else Sound.setAway(false); });
+  window.addEventListener('pagehide', goAway);
+  window.addEventListener('pageshow', () => { if (!document.hidden) Sound.setAway(false); });
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000)); last = now;

@@ -137,7 +137,7 @@ class Game {
   }
   // ---------- 状態遷移 ----------
   goTitle() {
-    this.state = 'title'; this.stateT = 0; this.bullets.length = 0; this.enemies.length = 0; this.ebullets.length = 0; this.items.length = 0; this.particles.clear(); this.texts.clear(); this.paused = false; this.bombT = -1; this.feverT = 0; this.fever = 0; this.dmgMul = 1;
+    this.state = 'title'; this.stateT = 0; this.bullets.length = 0; this.enemies.length = 0; this.ebullets.length = 0; this.items.length = 0; this.particles.clear(); this.texts.clear(); this.setPaused(false); this.bombT = -1; this.feverT = 0; this.fever = 0; this.dmgMul = 1;
     Sound.play('title');
   }
   startGame() {
@@ -155,7 +155,7 @@ class Game {
     this.bosses = []; this.bombT = -1; this.hitStop = 0; this.feverT = 0; this.fever = Math.min(this.fever, 60); this.dmgMul = 1; this.stagePop = 0; this.stageMaxChain = 0; this.stageDeaths = 0; this.chainShowT = 0;
     this.stageStartScore = this.score;
     const p = this.player; p.alive = true; p.hp = p.maxHp; p.x = -60; p.y = H / 2; p.entering = true; p.inv = 3; p.charge = 0; p.chargeReady = false;
-    this.state = 'intro'; this.stateT = 0; this.paused = false;
+    this.state = 'intro'; this.stateT = 0; this.setPaused(false);
     BG.init(i); Sound.play('stage' + i);
   }
   retryStage() { this.player.resetAll(this.diffIndex); this.score = this.stageStartScore; this.startStage(this.stageIndex); }
@@ -183,6 +183,15 @@ class Game {
   }
   gameOver() { this.state = 'gameover'; this.stateT = 0; Sound.stop(); this.saveHi(); }
   ending() { this.state = 'ending'; this.stateT = 0; this.allClear = true; this.score += this.player.lives * 10000; this.saveHi(); Sound.play('title'); this.enemies.length = 0; this.ebullets.length = 0; this.bullets.length = 0; }
+  // ポーズ中は BGM も止める
+  setPaused(v) { this.paused = v; Sound.hold(v); }
+  // 画面を離れたとき（アプリ切替・戻るボタンなど）、遊んでいる途中ならポーズにする
+  pauseForAway() { if ((this.state === 'play' || this.state === 'intro') && !this.paused) this.setPaused(true); }
+  // P / ESC / START で切り替え。ポーズ中はタップでもさいかい（スマホには P キーがないため）
+  updatePause() {
+    if (Input.hit('pause') || (this.paused && Input.tap())) { this.setPaused(!this.paused); Sound.sfx.select(); }
+    return this.paused;
+  }
   saveHi() { if (this.score > this.hi) { this.hi = this.score; try { localStorage.setItem('tetorisu_hi', String(this.hi)); } catch (e) { /* ignore */ } } }
 
   // ---------- 更新 ----------
@@ -225,14 +234,14 @@ class Game {
     if (start && this.stateT > 0.5) { this.diffIndex = this.titleCursor; Sound.ensure(); Sound.resume(); this.startGame(); }
   }
   updateIntro(dt) {
+    if (this.updatePause()) return;
     this.scroll += this.scrollSpeed * dt;
     this.player.update(dt);
     this.particles.update(dt); this.texts.update(dt);
     if (this.stateT > 2.8) { this.state = 'play'; this.stateT = 0; }
   }
   updatePlay(dt) {
-    if (Input.hit('pause')) { this.paused = !this.paused; Sound.sfx.select(); }
-    if (this.paused) return;
+    if (this.updatePause()) return;
     const p = this.player, st = STAGES[this.stageIndex];
     this.scroll += this.scrollSpeed * dt;
     this.enemyTime = p.timers.slow > 0 ? 0.45 : 1;
@@ -395,7 +404,7 @@ class Game {
     }
     if (this.chainCount > 1 && this.chainShowT > 0) this.drawChain(ctx);
     if (this.phase === 'warning' && this.state === 'play') this.drawWarning(ctx);
-    if (this.paused) { ctx.fillStyle = 'rgba(10,0,30,0.55)'; ctx.fillRect(0, 0, W, H); drawText(ctx, 'PAUSE', W / 2, H / 2 - 20, 56, '#fff', 'center', { outline: '#5A2A9A' }); drawText(ctx, 'P / ESC でさいかい', W / 2, H / 2 + 36, 20, '#fff'); }
+    if (this.paused) { ctx.fillStyle = 'rgba(10,0,30,0.55)'; ctx.fillRect(0, 0, W, H); drawText(ctx, 'PAUSE', W / 2, H / 2 - 20, 56, '#fff', 'center', { outline: '#5A2A9A' }); drawText(ctx, 'P / ESC / タップ でさいかい', W / 2, H / 2 + 36, 20, '#fff'); }
   }
   // ぷよぷよのように、となりあう同じ色の敵を太い帯でつなげて見せる（れんさする組み合わせが分かる）
   drawPuyoLinks(ctx) {
